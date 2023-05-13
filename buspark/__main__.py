@@ -1,9 +1,7 @@
 from .bus import Bus
 from .park import BusPark
 from .route import Route
-from .exceptions import (ReturnMenu,
-                         SelectedNonExistentBus,
-                         SelectedNonExistentRoute)
+from .exceptions import ReturnMenu
 from .decorators import are_there_buses
 
 
