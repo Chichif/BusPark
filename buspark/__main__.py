@@ -2,7 +2,8 @@ from .bus import Bus
 from .park import BusPark
 from .route import Route
 from .exceptions import ReturnMenu
-from .decorators import are_there_buses
+from .decorators import (are_there_buses, 
+                         are_there_routes)
 
 
 class BusStation:
@@ -29,7 +30,7 @@ class BusStation:
             },
             {
                 'title': 'Повернути автобус у парк',
-                'callback': self.create_bus
+                'callback': self.return_bus_to_park
             },
             {
                 'title': 'Видалити автобус',
@@ -37,7 +38,7 @@ class BusStation:
             },
             {
                 'title': 'Створити маршрут',
-                'callback': self.create_bus
+                'callback': self.create_route
             },
             {
                 'title': 'Видалити маршрут',
@@ -60,11 +61,11 @@ class BusStation:
         try:
             choosed_option: int = int(input(text))
         except ValueError as ex:
-            return self.show_menu('[!] Необхідно ввести саме цифру/число.')
+            return self.show_menu('\n\n [!] Необхідно ввести саме цифру/число.')
         else:
             if choosed_option in range(len(options)):
                 options[choosed_option]['callback']()
-            return self.show_menu('[!] Обрана неіснуюча опція :(')
+            return self.show_menu('\n\n [!] Обрана неіснуюча опція :(')
 
 
     def create_bus(self):
@@ -75,7 +76,7 @@ class BusStation:
         bus = Bus(bus_number, driver_name)
         self.park.add_bus(bus)
         self.buses.append(bus)
-        return self.show_menu('Автобус успішно створено та відправлено до парку!')
+        return self.show_menu('\n\nАвтобус успішно створено та відправлено до парку!')
 
 
     @are_there_buses
@@ -85,25 +86,58 @@ class BusStation:
         except ReturnMenu:
             return self.show_menu('\n\n')
         else:
-            match selected_bus.status:
-                case 'У парку':
-                    self.park.remove_bus(selected_bus)
-                case 'На маршруті':
-                    selected_bus.route.remove_bus(selected_bus)
+            if selected_bus.route:
+                selected_bus.route.remove_bus(selected_bus)
+            else:
+                self.park.remove_bus(selected_bus)
 
             self.buses.remove(selected_bus)
-            return self.show_menu('Автобус було вдало видалено!')
+            return self.show_menu('\n\nАвтобус було вдало видалено!')
     
+
+    def create_route(self):
+        start_point, end_point = (
+            input("Початкова точка: "),
+            input("Кінцева точка: ")
+        )
+        route = Route(start_point, end_point)
+        self.routes.append(route)
+        return self.show_menu("\n\nМаршрут вдало створено!")
+
+
     @are_there_buses
+    @are_there_routes
     def set_route_for_bus(self):
         try:
+            selected_bus = self._get_selected_object_from_input(self.buses)
             selected_route = self._get_selected_object_from_input(self.routes)
+        except ReturnMenu:
+            return self.show_menu('\n\n')
+        else:
+            if selected_bus.route:
+                if selected_bus.route is selected_route:
+                    return self.show_menu("\n\n[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
+                
+                msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
+                selected_route.add_bus(selected_bus)
+                return self.show_menu(msg)
+            
+            selected_route.add_bus(selected_bus)
+            return self.show_menu(f"\n\nДля автобусу встановлено {selected_route}")
+        
+    @are_there_buses
+    def return_bus_to_park(self):
+        try:
             selected_bus = self._get_selected_object_from_input(self.buses)
         except ReturnMenu:
             return self.show_menu('\n\n')
         else:
-            pass
-
+            if not selected_bus.route:
+                return self.show_menu("\n\n[!] Автобус наразі знаходиться у парку.")
+            msg = f"Автобус вдало повернено до парку та знято з '{str(selected_bus.route)}'"
+            self.park.add_bus(selected_bus)
+            return self.show_menu(msg)
+                
 
     def _get_selected_object_from_input(self, objects: list[Bus | Route]) -> Bus | Route:
         options = self._compose_objects_list_for_selecting(objects)
@@ -121,7 +155,7 @@ class BusStation:
                 selected_object = objects[selected_option]
                 return selected_object
             else:
-                print("Обрано неіснуючий варіант відповіді!")
+                print("\n\n [!] Обрана неіснуюча опція :(")
                 return self._get_selected_object_from_input()
     
 
