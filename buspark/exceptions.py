@@ -1,2 +1,2 @@
-class SelectedNonExistentBus(Exception): pass
 class ReturnMenu(Exception): pass
+class SelectedNonExistentBus(Exception): pass
