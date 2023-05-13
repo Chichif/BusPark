@@ -1,7 +1,9 @@
 from .bus import Bus
 from .park import BusPark
 from .route import Route
-from .exceptions import ReturnMenu, SelectedNonExistentBus
+from .exceptions import (ReturnMenu,
+                         SelectedNonExistentBus,
+                         SelectedNonExistentRoute)
 from .decorators import are_there_buses
 
 
@@ -28,6 +30,10 @@ class BusStation:
                 'callback': self.set_route_for_bus
             },
             {
+                'title': 'Повернути автобус у парк',
+                'callback': self.create_bus
+            },
+            {
                 'title': 'Видалити автобус',
                 'callback': self.delete_bus
             },
@@ -37,14 +43,6 @@ class BusStation:
             },
             {
                 'title': 'Видалити маршрут',
-                'callback': self.create_bus
-            },
-            {
-                'title': 'Відправити автобус на маршрут',
-                'callback': self.create_bus
-            },
-            {
-                'title': 'Повернути автобус у парк',
                 'callback': self.create_bus
             },
             {
@@ -81,12 +79,11 @@ class BusStation:
         self.buses.append(bus)
         return self.show_menu('Автобус успішно створено та відправлено до парку!')
 
+
     @are_there_buses
     def delete_bus(self):
         try:
-            selected_bus = self._get_selected_bus_from_input()
-        except SelectedNonExistentBus:
-            return self.show_menu("Обрано неіснуючий автобус!")
+            selected_bus = self._get_selected_object_from_input(self.buses)
         except ReturnMenu:
             return self.show_menu('\n\n')
         else:
@@ -101,35 +98,50 @@ class BusStation:
     
     @are_there_buses
     def set_route_for_bus(self):
-        pass
+        try:
+            selected_route = self._get_selected_object_from_input(self.routes)
+            selected_bus = self._get_selected_object_from_input(self.buses)
+        except ReturnMenu:
+            return self.show_menu('\n\n')
+        else:
+            pass
 
-    
-    def _get_selected_bus_from_input(self) -> Bus:
-        options = []
-        for option_index, bus in enumerate(self.buses):
-            options.append(
-                f'[{option_index}] - автобус под номером {str(bus)}'
-            )
+
+    def _get_selected_object_from_input(self, objects: list[Bus | Route]) -> Bus | Route:
+        options = self._compose_objects_list_for_selecting(objects)
         options.append(f'[{len(options)}] - повернутись до меню: ')
 
         try:
             selected_option = int(input('\n'.join(options)))
         except ValueError:
             print('Введено не цифру/число!')
-            return self._get_selected_bus_from_input()
+            return self._get_selected_object_from_input()
         else:
-            options_range = range(len(options))
-            if selected_option in options_range:
-                if selected_option == options_range[-1]:
+            if self._is_answer_existent(options, selected_option):
+                if selected_option == range(len(options))[-1]:
                     raise ReturnMenu()
-                selected_bus = self.buses[selected_option]
-                return selected_bus
+                selected_object = objects[selected_option]
+                return selected_object
             else:
-                raise SelectedNonExistentBus()
+                print("Обрано неіснуючий варіант відповіді!")
+                return self._get_selected_object_from_input()
+    
+
+    def _compose_objects_list_for_selecting(self, objects: list[Bus | Route]):
+        options = []
+        for option_index, object in enumerate(objects):
+            options.append(
+                f'[{option_index}] - {str(object)}'
+            )
+        return options
             
     
-    def _get_selected_route_from_input(self): pass
-
+    def _is_answer_existent(self, options: list[str], selected_option: int):
+        options_range = range(len(options))
+        if selected_option in options_range:
+            return True
+        else:
+            return False
             
 
 if __name__ == '__main__':
