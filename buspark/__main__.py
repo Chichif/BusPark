@@ -2,6 +2,7 @@ from .bus import Bus
 from .park import BusPark
 from .route import Route
 from .exceptions import ReturnMenu, SelectedNonExistentBus
+from .decorators import are_there_buses
 
 
 class BusStation:
@@ -24,7 +25,7 @@ class BusStation:
             },
             {
                 'title': 'Призначити маршрут автобусу',
-                'callback': self.create_bus
+                'callback': self.set_route_for_bus
             },
             {
                 'title': 'Видалити автобус',
@@ -63,11 +64,11 @@ class BusStation:
         try:
             choosed_option: int = int(input(text))
         except ValueError as ex:
-            self.show_menu('[!] Необхідно ввести саме цифру/число.')
+            return self.show_menu('[!] Необхідно ввести саме цифру/число.')
         else:
             if choosed_option in range(len(options)):
                 options[choosed_option]['callback']()
-            self.show_menu('[!] Обрана неіснуюча опція :(')
+            return self.show_menu('[!] Обрана неіснуюча опція :(')
 
 
     def create_bus(self):
@@ -78,19 +79,16 @@ class BusStation:
         bus = Bus(bus_number, driver_name)
         self.park.add_bus(bus)
         self.buses.append(bus)
-        self.show_menu('Автобус успішно створено та відправлено до парку!')
+        return self.show_menu('Автобус успішно створено та відправлено до парку!')
 
-
+    @are_there_buses
     def delete_bus(self):
-        if not self.buses:
-            self.show_menu('Жодного автобусу не існує, пропонуємо створити хоч якийсь!')
-
         try:
             selected_bus = self._get_selected_bus_from_input()
         except SelectedNonExistentBus:
-            self.show_menu("Обрано неіснуючий автобус!")
+            return self.show_menu("Обрано неіснуючий автобус!")
         except ReturnMenu:
-            self.show_menu('\n\n')
+            return self.show_menu('\n\n')
         else:
             match selected_bus.status:
                 case 'У парку':
@@ -99,10 +97,11 @@ class BusStation:
                     selected_bus.route.remove_bus(selected_bus)
 
             self.buses.remove(selected_bus)
-            self.show_menu('Автобус було вдало видалено!')
+            return self.show_menu('Автобус було вдало видалено!')
     
-
-    def set_route_for_bus(self): pass
+    @are_there_buses
+    def set_route_for_bus(self):
+        pass
 
     
     def _get_selected_bus_from_input(self) -> Bus:
