@@ -13,4 +13,4 @@ class Bus:
 
     
     def __str__(self) -> str:
-        return self.number
+        return f'автобус під номером {self.number}'
