@@ -5,7 +5,6 @@ class Bus:
         self.number = bus_number
         self.driver_name = driver_name
         self.route: Route = None
-        self.status: str = "У парку"
         self.performance = 0
         self.num_trips = 0
         self.last_departure_time = 0
