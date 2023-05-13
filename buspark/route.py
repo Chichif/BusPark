@@ -14,3 +14,6 @@ class Route:
     def get_buses_on_route(self):
         return self.bus_list
     
+    def __str__(self) -> str:
+        return f'маршрут {self.start_point} - {self.end_point}'
+    
