@@ -46,7 +46,11 @@ class BusStation:
             },
             {
                 'title': 'Вивести список автобусів на маршрутах',
-                'callback': self.create_bus
+                'callback': self.show_buses_in_routes
+            },
+            {
+                'title': 'Вивести список автобусів певного маршруту',
+                'callback': self.show_route_buses
             },
             {
                 'title': 'Вивести список автобусів у парку',
@@ -54,18 +58,18 @@ class BusStation:
             }
         )
 
-        text = ''
+        text = '\n\n'
         for option_index, option in enumerate(options):
             text += f"[{option_index}] - {option.get('title')}\n"
         
         try:
             choosed_option: int = int(input(text))
         except ValueError as ex:
-            return self.show_menu('\n\n [!] Необхідно ввести саме цифру/число.')
+            return self.show_menu('[!] Необхідно ввести саме цифру/число.')
         else:
             if choosed_option in range(len(options)):
                 options[choosed_option]['callback']()
-            return self.show_menu('\n\n [!] Обрана неіснуюча опція :(')
+            return self.show_menu('[!] Обрана неіснуюча опція :(')
 
 
     def create_bus(self):
@@ -74,9 +78,9 @@ class BusStation:
             input('Введіть ім\'я водія: ')
         )
         bus = Bus(bus_number, driver_name)
-        self.park.add_bus(bus)
+        self.park.add_bus(bus, create = True)
         self.buses.append(bus)
-        return self.show_menu('\n\nАвтобус успішно створено та відправлено до парку!')
+        return self.show_menu('Автобус успішно створено та відправлено до парку!')
 
 
     @are_there_buses
@@ -84,7 +88,7 @@ class BusStation:
         try:
             selected_bus = self._get_selected_object_from_input(self.buses)
         except ReturnMenu:
-            return self.show_menu('\n\n')
+            return self.show_menu('')
         else:
             if selected_bus.route:
                 selected_bus.route.remove_bus(selected_bus)
@@ -92,7 +96,7 @@ class BusStation:
                 self.park.remove_bus(selected_bus)
 
             self.buses.remove(selected_bus)
-            return self.show_menu('\n\nАвтобус було вдало видалено!')
+            return self.show_menu('Автобус було вдало видалено!')
     
 
     def create_route(self):
@@ -102,7 +106,49 @@ class BusStation:
         )
         route = Route(start_point, end_point)
         self.routes.append(route)
-        return self.show_menu("\n\nМаршрут вдало створено!")
+        return self.show_menu("Маршрут вдало створено!")
+    
+
+    @are_there_routes
+    def delete_route(self):
+        try:
+            selected_route = self._get_selected_object_from_input(self.routes)
+        except ReturnMenu:
+            return self.show_menu()
+        else:
+            for bus in selected_route.bus_list:
+                self.park.add_bus(bus)
+            self.routes.remove(selected_route)
+            return self.show_menu("Маршрут вдало видалено, а всі його автобуси відправлено до парку!")
+        
+    
+    @are_there_buses
+    @are_there_routes
+    def show_route_buses(self):
+        try:
+            selected_route = self._get_selected_object_from_input(self.routes)
+        except ReturnMenu:
+            return self.show_menu()
+        else:
+            msg = f"У '{selected_route}' такі автобуси: \n"
+            buses = self._compose_objects_list_for_selecting(selected_route.bus_list)
+            return self.show_menu(msg + '\n'.join(buses))
+        
+    
+    @are_there_buses
+    @are_there_routes
+    def show_buses_in_routes(self):
+        for index, bus in enumerate(self.buses, 1):
+            if bus.route:
+                print(f'[{index}] - {bus} - {bus.route}')
+        return self.show_menu()
+    
+
+    @are_there_buses
+    def show_buses_in_park(self):
+        for index, bus in enumerate(self.park.bus_list, 1):
+            print(f'[{index}] - {bus}')
+        return self.show_menu()
 
 
     @are_there_buses
@@ -112,28 +158,29 @@ class BusStation:
             selected_bus = self._get_selected_object_from_input(self.buses)
             selected_route = self._get_selected_object_from_input(self.routes)
         except ReturnMenu:
-            return self.show_menu('\n\n')
+            return self.show_menu()
         else:
             if selected_bus.route:
                 if selected_bus.route is selected_route:
-                    return self.show_menu("\n\n[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
+                    return self.show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
                 
                 msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
                 selected_route.add_bus(selected_bus)
                 return self.show_menu(msg)
             
             selected_route.add_bus(selected_bus)
-            return self.show_menu(f"\n\nДля автобусу встановлено {selected_route}")
+            return self.show_menu(f"Для автобусу встановлено {selected_route}")
         
+
     @are_there_buses
     def return_bus_to_park(self):
         try:
             selected_bus = self._get_selected_object_from_input(self.buses)
         except ReturnMenu:
-            return self.show_menu('\n\n')
+            return self.show_menu()
         else:
             if not selected_bus.route:
-                return self.show_menu("\n\n[!] Автобус наразі знаходиться у парку.")
+                return self.show_menu("[!] Автобус наразі знаходиться у парку.")
             msg = f"Автобус вдало повернено до парку та знято з '{str(selected_bus.route)}'"
             self.park.add_bus(selected_bus)
             return self.show_menu(msg)
@@ -144,7 +191,7 @@ class BusStation:
         options.append(f'[{len(options)}] - повернутись до меню: ')
 
         try:
-            selected_option = int(input('\n'.join(options)))
+            selected_option = int(input('\n'.join(options)) + '\n\n')
         except ValueError:
             print('Введено не цифру/число!')
             return self._get_selected_object_from_input()
