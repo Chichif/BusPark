@@ -27,12 +27,12 @@ return_bus_to_park(): Повертає автобус на автостоянк�
 '''
 
 
-from .bus import Bus
-from .park import BusPark
-from .route import Route
-from .exceptions import ReturnMenu
-from .decorators import (are_there_buses, 
-                         are_there_routes)
+from bus import Bus
+from park import BusPark
+from route import Route
+from exceptions import ReturnMenu
+from decorators import (are_there_buses, 
+                        are_there_routes)
 
 
 class BusStation:
@@ -92,7 +92,7 @@ class BusStation:
             },
             {
                 'title': 'Видалити маршрут',
-                'callback': self.create_bus
+                'callback': self.delete_route
             },
             {
                 'title': 'Вивести список автобусів на маршрутах',
@@ -104,7 +104,7 @@ class BusStation:
             },
             {
                 'title': 'Вивести список автобусів у парку',
-                'callback': self.create_bus
+                'callback': self.show_buses_in_park
             }
         )
 
@@ -133,9 +133,12 @@ class BusStation:
         """
 
         bus_number, driver_name = (
-            input('Введіть назву автобусу: '),
+            input('Введіть номер автобусу: '),
             input('Введіть ім\'я водія: ')
         )
+        if bus_number in (bus.number for bus in self.buses):
+            print("[!] Автобус з таким номером вже існує!")
+            return self.create_bus()
         bus = Bus(bus_number, driver_name)
         self.park.add_bus(bus, create = True)
         self.buses.append(bus)
@@ -226,6 +229,8 @@ class BusStation:
         except ReturnMenu:
             return self.show_menu()
         else:
+            if not selected_route.bus_list:
+                return self.show_menu(f"[!] Автобуси у '{selected_route}' відсутні!")
             msg = f"У '{selected_route}' такі автобуси: \n"
             buses = self._compose_objects_list_for_selecting(selected_route.bus_list)
             return self.show_menu(msg + '\n'.join(buses))
@@ -242,9 +247,15 @@ class BusStation:
         Повертає:
         None
         """
+        flag = False
         for index, bus in enumerate(self.buses, 1):
             if bus.route:
+                if not flag:
+                    flag = True
                 print(f'[{index}] - {bus} - {bus.route}')
+        
+        if not flag:
+            return self.show_menu("[!] Автобуси у маршрутах відсутні!")
         return self.show_menu()
     
 
@@ -258,6 +269,9 @@ class BusStation:
         Повертає:
         None
         """
+        if not self.park.bus_list:
+            return self.show_menu('[!] Парк пустий!')
+        
         for index, bus in enumerate(self.park.bus_list, 1):
             print(f'[{index}] - {bus}')
         return self.show_menu()
@@ -288,9 +302,11 @@ class BusStation:
                     return self.show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
                 
                 msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
+                selected_bus.route.remove_bus(selected_bus)
                 selected_route.add_bus(selected_bus)
                 return self.show_menu(msg)
             
+            self.park.remove_bus(selected_bus)
             selected_route.add_bus(selected_bus)
             return self.show_menu(f"Для автобусу встановлено {selected_route}")
         
@@ -308,8 +324,12 @@ class BusStation:
         Повертає:
         None
         """
+        filtered_buses = [bus for bus in self.buses if not bus in self.park.bus_list]
+        if not filtered_buses:
+            return self.show_menu("[!] Всі автобуси наразі у парку!")
+        
         try:
-            selected_bus = self._get_selected_object_from_input(self.buses)
+            selected_bus = self._get_selected_object_from_input(filtered_buses)
         except ReturnMenu:
             return self.show_menu()
         else:

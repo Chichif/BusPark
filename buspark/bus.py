@@ -1,4 +1,4 @@
-from .route import Route
+from route import Route
 
 class Bus:
     def __init__(self, bus_number, driver_name):
