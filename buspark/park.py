@@ -2,8 +2,9 @@ class BusPark:
     def __init__(self):
         self.bus_list = []
 
-    def add_bus(self, bus):
-        bus.route.remove_bus(bus)
+    def add_bus(self, bus, create: bool = False):
+        if not create:
+            bus.route.remove_bus(bus)
         self.bus_list.append(bus)
 
     def remove_bus(self, bus):
