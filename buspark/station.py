@@ -72,63 +72,63 @@ class AutoStation(BaseModel):
         if menu_msg: print(menu_msg)
         options = (
             {
-                'title': 'Вийти',
-                'callback': lambda: exit('Чекаємо на Вас знову!')
+                "title": 'Вийти',
+                "callback": lambda: exit('Чекаємо на Вас знову!')
             },
             {
-                'title': 'Створити автобус та додати його у парк',
-                'callback': self.create_bus
+                "title": 'Створити автобус та додати його у парк',
+                "callback": self.create_bus
             },
             {
-                'title': 'Призначити маршрут автобусу',
-                'callback': self.set_route_for_bus
+                "title": 'Призначити маршрут автобусу',
+                "callback": self.set_route_for_bus
             },
             {
-                'title': 'Відправити автобус на маршрут',
-                'callback': self.depart_bus
+                "title": 'Відправити автобус на маршрут',
+                "callback": self.depart_bus
             },
             {
-                'title': 'Повернути автобус у парк',
-                'callback': self.return_bus_to_park
+                "title": 'Повернути автобус у парк',
+                "callback": self.return_bus_to_park
             },
             {
-                'title': 'Видалити автобус',
-                'callback': self.delete_bus
+                "title": 'Видалити автобус',
+                "callback": self.delete_bus
             },
             {
-                'title': 'Створити маршрут',
-                'callback': self.create_route
+                "title": 'Створити маршрут',
+                "callback": self.create_route
             },
             {
-                'title': 'Видалити маршрут',
-                'callback': self.delete_route
+                "title": 'Видалити маршрут',
+                "callback": self.delete_route
             },
             {
-                'title': 'Вивести список автобусів у дорозі',
-                'callback': self.show_departed_buses
+                "title": 'Вивести список автобусів у дорозі',
+                "callback": self.show_departed_buses
             },
             {
-                'title': 'Вивести список автобусів у парку',
-                'callback': self.show_buses_in_park
+                "title": 'Вивести список автобусів у парку',
+                "callback": self.show_buses_in_park
             },
             {
-                'title': 'Вивести список автобусів певного маршруту',
-                'callback': self.show_route_buses
+                "title": 'Вивести список автобусів певного маршруту',
+                "callback": self.show_route_buses
             }
         )
 
-        text = '\n\n'
+        text = "\n\n"
         for option_index, option in enumerate(options):
-            text += f"[{option_index}] - {option.get('title')}\n"
-        
+            text += f'[{option_index}] - {option.get("title")}\n'
+
         try:
-            choosed_option: int = int(input(text))
+            choosed_option = int(input(text))
         except ValueError as ex:
-            return self.show_menu('[!] Необхідно ввести саме цифру/число.')
+            return self.show_menu("[!] Необхідно ввести саме цифру/число.")
         else:
             if choosed_option in range(len(options)):
-                options[choosed_option]['callback']()
-            return self.show_menu('[!] Обрана неіснуюча опція :(')
+                options[choosed_option]["callback"]()
+            return self.show_menu("[!] Обрана неіснуюча опція :(")
 
 
     def create_bus(self):
@@ -230,7 +230,7 @@ class AutoStation(BaseModel):
         """
         options = []
         for index, departure in enumerate(self.active_departures):
-            options.append(f'[{index} - {departure.bus} | {departure.bus.route} | у дорозі {departure.travel_time}]')
+            options.append(f"[{index} - {departure.bus} | {departure.bus.route} | у дорозі {departure.travel_time}]")
         return self.show_menu(options)
     
 
@@ -244,10 +244,10 @@ class AutoStation(BaseModel):
         Повертає: None
         """
         if not self.park.parked_buses:
-            return self.show_menu('[!] Парк пустий!')
+            return self.show_menu("[!] Парк пустий!")
         
         for index, bus in enumerate(self.park.parked_buses, 1):
-            print(f'[{index}] - {bus}')
+            print(f"[{index}] - {bus}")
         return self.show_menu()
 
 
@@ -301,11 +301,11 @@ class AutoStation(BaseModel):
             if selected_bus_active_departure:
                 selected_bus_active_departure.finish_travel()
                 self.bus_list.remove(selected_bus)
-                return self.show_menu('Автобус було вдало знято з маршруту та видалено!')
+                return self.show_menu("Автобус було вдало знято з маршруту та видалено!")
             
             self.park.remove_bus(selected_bus)
             self.bus_list.remove(selected_bus)
-            return self.show_menu('Автобус було вдало видалено!')
+            return self.show_menu("Автобус було вдало видалено!")
     
 
     def create_route(self):
@@ -501,7 +501,7 @@ class AutoStation(BaseModel):
         options = []
         for option_index, object in enumerate(objects):
             options.append(
-                f'[{option_index}] - {object}'
+                f"[{option_index}] - {object}"
             )
         return options
             
@@ -527,5 +527,5 @@ class AutoStation(BaseModel):
             return False
             
 
-if __name__ == '__main__':
+if __name__ == "__main__":
    AutoStation().show_menu()
