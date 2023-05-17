@@ -1,7 +1,5 @@
-from functools import wraps
 
 def are_there_buses(func):
-    @wraps
     def wrapper(self, *args, **kwargs):
         """
         Декоратор, який перевіряє наявність автобусів перед викликом функції.
@@ -15,7 +13,6 @@ def are_there_buses(func):
 
 
 def are_there_routes(func):
-    @wraps
     def wrapper(self, *args, **kwargs):
         """
         Декоратор, який перевіряє наявність маршрутів перед викликом функції.
@@ -29,7 +26,6 @@ def are_there_routes(func):
 
 
 def are_there_departed_buses(func):
-    @wraps
     def wrapper(self, *args, **kwargs):
         """
         Декоратор, який перевіряє наявність відправлених автобусів перед викликом функції.
@@ -38,5 +34,18 @@ def are_there_departed_buses(func):
         """
         if not self.active_departures:
             return self.show_menu("[!] Автобуси у дорозі відсутні!")
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
+def are_there_departures(func):
+    def wrapper(self, *args, **kwargs):
+        """
+        Декоратор, який перевіряє наявність відправлень перед викликом функції.
+
+        Якщо жодного відправлення немає, виводить повідомлення про відсутність автобусів у дорозі.
+        """
+        if not self.departure_list:
+            return self.show_menu("[!] Жодного відправлення не відбувалось!")
         return func(self, *args, **kwargs)
     return wrapper
