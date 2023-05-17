@@ -403,11 +403,38 @@ class AutoStation(BaseModel):
     @are_there_buses
     @are_there_departures
     def show_analytics(self):
+        """
+
+        Підраховує кількість рейсів для кожного автобуса та обчислює загальний час, 
+        витрачений на кожен рейс. Виводить інформацію відповідно до заданого формату.
+
+        :return: Повертає результат функції `show_menu()`.
+
+
+        Алгоритм роботи функції:
+
+        Список self.bus_list сортується за номером автобуса.
+
+        Для кожного автобуса:
+        - Виводиться заголовок рейсів для даного автобуса.
+        - Ініціалізуються змінні total_count і total_time для підрахунку загальної кількості рейсів та часу.
+
+        Для кожного відправлення в self.departure_list:
+        * Якщо номер автобуса відправлення співпадає з номером поточного автобуса:
+                - Збільшується лічильник total_count на 1.
+                - Час подорожі перетворюється у формат datetime.
+                - Час подорожі додається до загального часу total_time.
+                - Виводиться інформація про маршрут та час подорожі.
+        * Виводиться загальна кількість рейсів та загальний час для даного автобуса.
+        * Повертається результат функції show_menu().
+        """
         sorted_buses = sorted(self.bus_list, key = lambda bus: bus.number)
+
         for bus in sorted_buses:
             print(f"\n\nРейсы '{bus.number}'")
             total_count = 0
             total_time = timedelta(0)
+
             for departure in self.departure_list:
                 if departure.bus.number == bus.number:
                     total_count += 1
@@ -418,7 +445,9 @@ class AutoStation(BaseModel):
                         seconds = travel_time.second
                     )
                     print(f'{departure.route} | {departure.travel_time}')
-            print(f"Итого - {total_count} за {total_time}")
+
+            print(f"Ітого - {total_count} за {total_time}")
+            
         return self.show_menu()
         
 
