@@ -403,46 +403,23 @@ class AutoStation(BaseModel):
     @are_there_buses
     @are_there_departures
     def show_analytics(self):
-        trip_count = defaultdict(int)
-        trip_time = defaultdict(timedelta)
-        for departure in self.departure_list:
-            bus_number = departure.bus.number
-            route = departure.route
-            travel_time = datetime.strptime(departure.travel_time, "%H:%M:%S")
-            time_delta = timedelta(
-                hours = travel_time.hour,
-                minutes = travel_time.minute,
-                seconds = travel_time.second
-            )
-            key = (bus_number, str(route))
-            trip_count[key] += 1    
-            trip_time[key] += time_delta
-
         sorted_buses = sorted(self.bus_list, key = lambda bus: bus.number)
         for bus in sorted_buses:
             print(f"\n\nРейсы '{bus.number}'")
             total_count = 0
             total_time = timedelta(0)
-            for trip in trip_count:
-                if trip[0] == bus.number:
-                    route = trip[1]
-                    count = trip_count[trip]
-                    time = trip_time[trip]
-                    total_count += count
-                    total_time += time
-                    print(
-                        "\n".join(
-                            list(
-                                f'{route} | {departure.travel_time}' 
-                                for departure in self.departure_list 
-                                if departure.bus == bus and str(departure.route) == route
-                            )
-                        )
+            for departure in self.departure_list:
+                if departure.bus.number == bus.number:
+                    total_count += 1
+                    travel_time = datetime.strptime(departure.travel_time, "%H:%M:%S")
+                    total_time += timedelta(
+                        hours = travel_time.hour,
+                        minutes = travel_time.minute,
+                        seconds = travel_time.second
                     )
+                    print(f'{departure.route} | {departure.travel_time}')
             print(f"Итого - {total_count} за {total_time}")
-
         return self.show_menu()
-        
         
 
     @property
