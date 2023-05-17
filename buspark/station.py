@@ -10,10 +10,12 @@ from models import (City,
                     Departure)
 from exceptions import (ReturnMenu,
                         NoBusesWithRoute)
-from decorators import (are_there_buses, 
-                        are_there_departures, 
-                        are_there_routes,
-                        are_there_departed_buses)
+from decorators import (are_here_buses,
+                        are_here_buses_tied_to_route,
+                        are_here_departures, 
+                        are_here_routes,
+                        are_here_departed_buses,
+                        are_here_free_buses)
 
 
 class AutoStation(BaseModel):
@@ -137,9 +139,10 @@ class AutoStation(BaseModel):
             {str(bus)[0].capitalize() + str(bus)[1:]} успішно створено та відправлено до парку!
         """.strip()) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
 
-
-    @are_there_buses
-    @are_there_routes
+    @are_here_buses
+    @are_here_buses_tied_to_route
+    @are_here_routes
+    @are_here_free_buses
     def depart_bus(self):
         """
         Метод для відправлення автобусу.
@@ -153,12 +156,6 @@ class AutoStation(BaseModel):
 
         Повертає меню з повідомленням про успішне відправлення автобусу.
         """
-        if not self.buses_tied_to_route:
-            return self.show_menu("[!] Жодного автобусу з прив'язаним маршрутом не існує!")
-        
-        if not self.not_departed_buses:
-            return self.show_menu("[!] Усі автобуси у дорозі, вільних немає!")
-        
         try:
             selected_bus = self._get_selected_object_from_input(self.not_departed_buses)
         except ReturnMenu:
@@ -173,7 +170,7 @@ class AutoStation(BaseModel):
             """.strip()) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
         
 
-    @are_there_buses
+    @are_here_buses
     def return_bus_to_park(self):
         """
         Метод для повернення автобуса до парку.
@@ -200,9 +197,9 @@ class AutoStation(BaseModel):
             return self.show_menu(msg)
         
 
-    @are_there_buses
-    @are_there_routes
-    @are_there_departed_buses
+    @are_here_buses
+    @are_here_routes
+    @are_here_departed_buses
     def show_departed_buses(self):
         """
         Метод для відображення списку автобусів у дорозі.
@@ -217,7 +214,7 @@ class AutoStation(BaseModel):
         return self.show_menu("\n".join(options))
     
 
-    @are_there_buses
+    @are_here_buses
     def show_buses_in_park(self):
         """
         Метод для відображення списку автобусів у парку.
@@ -234,8 +231,8 @@ class AutoStation(BaseModel):
         return self.show_menu()
 
 
-    @are_there_buses
-    @are_there_routes
+    @are_here_buses
+    @are_here_routes
     def set_route_for_bus(self):
         """
         Метод для призначення маршруту для автобуса.
@@ -275,7 +272,7 @@ class AutoStation(BaseModel):
             return self.show_menu(msg)
 
 
-    @are_there_buses
+    @are_here_buses
     def delete_bus(self):
         """
         Метод для видалення автобуса.
@@ -320,8 +317,8 @@ class AutoStation(BaseModel):
         return self.show_menu("Маршрут вдало створено!")
     
 
-    @are_there_buses
-    @are_there_routes
+    @are_here_buses
+    @are_here_routes
     def show_route_buses(self):
         """
         Метод для відображення списку автобусів певного маршруту.
@@ -344,7 +341,7 @@ class AutoStation(BaseModel):
             return self.show_menu(msg + '\n'.join(buses))
     
 
-    @are_there_routes
+    @are_here_routes
     def delete_route(self):
         """
         Метод для видалення маршруту.
@@ -374,8 +371,8 @@ class AutoStation(BaseModel):
             return self.show_menu(msg)
     
 
-    @are_there_buses
-    @are_there_departures
+    @are_here_buses
+    @are_here_departures
     def show_analytics(self):
         """
 
