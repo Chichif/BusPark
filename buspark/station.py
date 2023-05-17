@@ -25,7 +25,6 @@ return_bus_to_park(): Повертає автобус на автостоянк�
 
 Загалом, цей код надає основну структуру для управління автобусами та маршрутами на автовокзалі.
 '''
-from collections import defaultdict
 from pydantic import BaseModel
 from datetime import (timedelta, 
                       datetime)
@@ -34,8 +33,7 @@ from models import (City,
                     Bus,
                     Park,
                     Route,
-                    Departure,
-                    BusStatusEnum)
+                    Departure)
 from exceptions import (ReturnMenu,
                         NoBusesWithRoute)
 from decorators import (are_there_buses, 
@@ -447,7 +445,7 @@ class AutoStation(BaseModel):
                     print(f'{departure.route} | {departure.travel_time}')
 
             print(f"Ітого - {total_count} за {total_time}")
-            
+
         return self.show_menu()
         
 
