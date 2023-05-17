@@ -24,14 +24,26 @@ class BusStatusEnum(str, Enum):
     IN_THE_PARKING = 'У парку'
 
 
+class Driver(BaseModel):
+    first_name: str
+    second_name: str
+
+    @property
+    def initials(self):
+        return f"{self.first_name[0].capitalize()}. {self.second_name[0].capitalize()}."
+    
+    def __str__(self) -> str:
+        return self.initials
+
+
 class Bus(BaseModel):
     number: str
-    driver_name: str
+    driver: Driver
     route: Route = None
     status: BusStatusEnum = BusStatusEnum.IN_THE_PARKING
 
     def __str__(self) -> str:
-        return f'автобус {self.number}'
+        return f'автобус {self.number} з водієм {self.driver}'
 
 
 class Departure(BaseModel): 

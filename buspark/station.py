@@ -1,35 +1,9 @@
-'''
-Наданий код, здається, є реалізацією системи управління автовокзалом на мові Python. Клас BusStation представляє автовокзал та надає методи для управління автобусами, маршрутами та взаємодією між ними.
-
-Основні компоненти такі:
-
-Атрибути класу:
-
-park: Екземпляр класу BusPark, що представляє автостоянку.
-routes: Список об'єктів класу Route, що представляють доступні маршрути.
-buses: Список об'єктів класу Bus, що представляють автобуси на вокзалі.
-Методи:
-
-__init()__: Ініціалізує об'єкт класу BusStation з порожньою автостоянкою, маршрутами та автобусами.
-show_menu(): Відображає меню з варіантами і обробляє вибрані дії.
-create_bus(): Створює новий автобус і додає його на автостоянку та до списку автобусів.
-delete_bus(): Видаляє автобус із списку автобусів та видаляє його з пов'язаного маршруту, якщо це застосовно.
-create_route(): Створює новий маршрут і додає його до списку маршрутів.
-delete_route(): Видаляє маршрут із списку маршрутів та повертає пов'язані автобуси на автостоянку.
-show_route_buses(): Відображає автобуси, пов'язані з обраним маршрутом.
-show_buses_in_routes(): Відображає автобуси, які знаходяться на маршрутах.
-show_buses_in_park(): Відображає автобуси, які знаходяться на автостоянці.
-set_route_for_bus(): Призначає маршрут для обраного автобуса та оновлює його поточний маршрут.
-return_bus_to_park(): Повертає автобус на автостоянку та видаляє його поточний маршрут.
-Код використовує кілька користувацьких декораторів (are_there_buses та are_there_routes), щоб перевірити на наявність автобусів або маршрутів перед виконанням певних методів.
-
-Загалом, цей код надає основну структуру для управління автобусами та маршрутами на автовокзалі.
-'''
 from pydantic import BaseModel
 from datetime import (timedelta, 
                       datetime)
 
 from models import (City,
+                    Driver,
                     Bus,
                     Park,
                     Route,
@@ -147,14 +121,16 @@ class AutoStation(BaseModel):
         None
         """
 
-        bus_number, driver_name = (
-            input('Введіть номер автобусу: '),
-            input('Введіть ім\'я водія: ')
+        bus_number,  driver_first_name, driver_second_name = (
+            input("Введіть номер автобусу: "),
+            input("Введіть ім'я водія: "),
+            input("Введіть фамілію водія: ")
         )
         if bus_number in (bus.number for bus in self.bus_list):
             print("\n\n[!] Автобус з таким номером вже існує!")
             return self.create_bus()
-        bus = Bus(number = bus_number, driver_name = driver_name)
+        driver = Driver(first_name = driver_first_name, second_name = driver_second_name)
+        bus = Bus(number = bus_number, driver = driver)
         self.park.add_bus(bus)
         self.bus_list.append(bus)
         return self.show_menu(f"""
@@ -269,6 +245,8 @@ class AutoStation(BaseModel):
         виводиться повідомлення про це. В іншому випадку, маршрут для автобуса змінюється,
         а автобус додається до нового маршруту.
 
+        Якщо до цього 
+
         Повертає: None
         """
         try:
@@ -277,26 +255,22 @@ class AutoStation(BaseModel):
         except ReturnMenu:
             return self.show_menu()
         else:
+            bus_active_departure = self._get_bus_active_departure(selected_bus)
+
             if selected_bus.route:
                 if selected_bus.route is selected_route:
                     return self.show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
                 
                 msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
-                bus_active_departure = self._get_bus_active_departure(selected_bus)
                 if bus_active_departure:
                     bus_active_departure.finish_travel()
-                    msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}', а рейс зупинено!"
+                    self.park.add_bus(selected_bus)
+                    msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}', а рейс зупинено!\nАвтобус повернено у парк."
 
                 selected_bus.route = selected_route
                 return self.show_menu(msg)
             
             msg = f"Для автобусу встановлено {selected_route}"
-            bus_active_departure = self._get_bus_active_departure(selected_bus)
-            if bus_active_departure:
-                bus_active_departure.finish_travel()
-                msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}', а рейс зупинено!"
-                self.park.add_bus(selected_bus)
-
             selected_bus.route = selected_route
             return self.show_menu(msg)
 
@@ -308,6 +282,7 @@ class AutoStation(BaseModel):
 
         Користувачу будуть запропоновані вибрати автобус зі списку, який потрібно видалити.
         Вибраний автобус буде видалений зі списку автобусів та зі зв'язаного з ним маршруту (якщо такий існує).
+        Активне відправлення з цим автобусом буде завершено.
 
         Повертає: None
         """
@@ -377,6 +352,7 @@ class AutoStation(BaseModel):
         Користувачу будуть запропоновані вибрати маршрут зі списку, який потрібно видалити.
         Вибраний маршрут буде видалений зі списку маршрутів.
         Усі автобуси, пов'язані з видаленим маршрутом, будуть повернуті до парку автобусів.
+        Діючі відправлення за цим маршрутом будуть зупинені.
 
         Повертає: None
         """
@@ -429,7 +405,7 @@ class AutoStation(BaseModel):
         sorted_buses = sorted(self.bus_list, key = lambda bus: bus.number)
 
         for bus in sorted_buses:
-            print(f"\n\nРейсы '{bus.number}'")
+            print(f"\n\nРейсы '{bus.number} з водієм {bus.driver.first_name}'")
             total_count = 0
             total_time = timedelta(0)
 
