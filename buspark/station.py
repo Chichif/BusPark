@@ -8,7 +8,8 @@ from models import (City,
                     Bus,
                     Park,
                     Route,
-                    Departure)
+                    Departure,
+                    BusStatusEnum)
 from exceptions import (ReturnMenu,
                         NoBusesWithRoute)
 from decorators import (are_here_buses,
@@ -173,6 +174,7 @@ class AutoStation(BaseModel):
             departure = Departure(bus = selected_bus, route = selected_bus.route)
             self.park.remove_bus(selected_bus)
             departure.start_travel()
+            selected_bus.status = BusStatusEnum.ON_THE_ROAD
             self.departure_list.append(departure)
             return self.show_menu(f"""
                 {str(selected_bus)[0].capitalize() + str(selected_bus)[1:]} відправлено у {selected_bus.route}!
@@ -203,6 +205,7 @@ class AutoStation(BaseModel):
             bus_departure: Departure = self._get_bus_active_departure(selected_bus) # гарантовано, що має бути лише один результат
             bus_departure.finish_travel()
             self.park.add_bus(selected_bus)
+            selected_bus.status = BusStatusEnum.IN_THE_PARKING
             return self.show_menu(msg)
         
 

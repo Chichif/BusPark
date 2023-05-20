@@ -56,12 +56,10 @@ class Departure(BaseModel):
 
     def start_travel(self):
         self.departure_time = datetime.now()
-        self.bus.status = BusStatusEnum.ON_THE_ROAD
 
 
     def finish_travel(self):
         self.arrival_time = datetime.now()
-        self.bus.status = BusStatusEnum.IN_THE_PARKING
 
 
     @property
