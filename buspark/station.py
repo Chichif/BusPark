@@ -1,6 +1,7 @@
 from typing import Self
 from pydantic import BaseModel
-from datetime import timedelta
+from datetime import (timedelta, 
+                      datetime)
 
 from models import (City,
                     Driver,
@@ -17,7 +18,7 @@ from decorators import (are_here_buses,
                         are_here_routes,
                         are_here_departed_buses,
                         are_here_free_buses)
-from serializers import timedelta_to_str
+from formatters import timedelta_to_str
 
 
 class Dispatcher(BaseModel):
@@ -318,38 +319,12 @@ class Analytic(BaseModel):
 class AutoStation(BaseModel):
     """
     Клас AutoStation представляє автобусну станцію.
-    Являється SingleTone`ом.
 
     __Атрибути__:
     - park: Park - парк автобусів
     - route_list: list[Route] - список маршрутів
     - bus_list: list[Bus] - список автобусів
     - departure_list: list[Departure] - список всіх відправлень автобусів
-    - active_departures: list[Departure] - список активних відправлень
-    - departed_buses: list[Bus] - список автобусів у відправленні
-    - not_departed_buses: list[Bus] - список невідправлених автобусів
-    - buses_tied_to_route: list[Bus] - список автобусів без прив'язаних маршрутів
-
-    __Методи__:
-
-    - \_\_new\_\_(mcs, *args, **kwargs) -> Self
-    - show_menu(self, menu_msg: str | None) -> None
-    - create_bus(self) -> None
-    - depart_bus(self) -> None
-    - return_bus_to_park(self) -> None
-    - show_departed_buses(self) -> None
-    - show_buses_in_park(self) -> None
-    - set_route_for_bus(self) -> None
-    - delete_bus(self) -> None
-    - create_route(self) -> None
-    - show_route_buses(self) -> None
-    - delete_route(self) -> None
-    - show_analytics(self) -> None
-    - _get_bus_active_departure(self, bus: Bus) -> Departure
-    - _get_route_buses(self, route: Route) -> list[Bus]
-    - _get_selected_object_from_input(self, oblects: list[Bus | Route]) -> Bus | Route
-    - _compose_objects_list_for_selection(self, objects: list[Bus | Route]) -> list[str]
-    - _is_answer_existent(self, options: list[Bus | Route], selected_option: int) -> bool
     """
     park = Park()
     route_list: list[Route] = []
