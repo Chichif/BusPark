@@ -16,6 +16,7 @@ from decorators import (are_here_buses,
                         are_here_routes,
                         are_here_departed_buses,
                         are_here_free_buses)
+from formatters import timedelta_to_str
 
 
 class AutoStation(BaseModel):
@@ -210,7 +211,7 @@ class AutoStation(BaseModel):
         """
         options = []
         for index, departure in enumerate(self.active_departures):
-            options.append(f"[{index} - {departure.bus} | {departure.bus.route} | у дорозі {departure.travel_time}]")
+            options.append(f"[{index} - {departure.bus} | {departure.bus.route} | у дорозі {timedelta_to_str(departure.travel_time)}]")
         return self.show_menu("\n".join(options))
     
 
@@ -404,20 +405,15 @@ class AutoStation(BaseModel):
         for bus in sorted_buses:
             print(f"\n\nРейсы '{bus.number} з водієм {bus.driver.first_name}'")
             total_count = 0
-            total_time = timedelta(0)
+            total_time = timedelta()
 
             for departure in self.departure_list:
                 if departure.bus.number == bus.number:
                     total_count += 1
-                    travel_time = datetime.strptime(departure.travel_time, "%H:%M:%S")
-                    total_time += timedelta(
-                        hours = travel_time.hour,
-                        minutes = travel_time.minute,
-                        seconds = travel_time.second
-                    )
-                    print(f'{departure.route} | {departure.travel_time}')
+                    total_time += departure.travel_time
+                    print(f'{departure.route} | {timedelta_to_str(departure.travel_time)}')
 
-            print(f"Ітого - {total_count} за {total_time}")
+            print(f"Ітого - {total_count} за {timedelta_to_str(total_time)}")
 
         return self.show_menu()
         
