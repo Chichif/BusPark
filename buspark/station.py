@@ -1,7 +1,6 @@
 from typing import Self
 from pydantic import BaseModel
-from datetime import (timedelta, 
-                      datetime)
+from datetime import timedelta
 
 from models import (City,
                     Driver,
@@ -18,18 +17,39 @@ from decorators import (are_here_buses,
                         are_here_routes,
                         are_here_departed_buses,
                         are_here_free_buses)
-from formatters import timedelta_to_str
+from serializers import timedelta_to_str
 
 
 class AutoStation(BaseModel):
     """
     Клас AutoStation представляє автобусну станцію.
+    Являється SingleTone`ом.
 
     Атрибути:
     - park: Park - парк автобусів
     - route_list: list[Route] - список маршрутів
     - bus_list: list[Bus] - список автобусів
     - departure_list: list[Departure] - список всіх відправлень автобусів
+    - active_departures: list[Departure] - список активних відправлень
+    - departed_buses: list[Bus] - список автобусів у відправленні
+    - not_departed_buses: list[Bus] - список невідправлених автобусів
+    - buses_tied_to_route: list[Bus] - список автобусів без прив'язаних маршрутів
+
+    Методи:
+
+    - \_\_new\_\_(mcs, *args, **kwargs) -> Self
+    - show_menu(self, menu_msg: str | None) -> None
+    - create_bus(self) -> None
+    - depart_bus(self) -> None
+    - return_bus_to_park(self) -> None
+    - show_departed_buses(self) -> None
+    - show_buses_in_park(self) -> None
+    - set_route_for_buse(self) -> None
+    - delete_bus(self) -> None
+    - create_route(self) -> None
+    - show_route_buses(self) -> None
+    - delete_route(self) -> None
+    - show_analytics(self) -> None
     """
     park = Park()
     route_list: list[Route] = []
