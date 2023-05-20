@@ -72,14 +72,14 @@ class Departure(BaseModel):
 
 
 class Park(BaseModel):
-    bus_list: list[Bus] = []
     __instance = None
 
     
-    def __new__(mcs, *args, **kwargs) -> Self:
-        if not mcs.__instance:
-            mcs.__instance = super().__new__(mcs, *args, **kwargs)
-        return mcs.__instance
+    def __new__(cls, *args, **kwargs) -> Self:
+        if not cls.__instance:
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+            cls.bus_list: list[Bus] = []
+        return cls.__instance
 
     def add_bus(self, bus: Bus):
         self.bus_list.append(bus)

@@ -1,7 +1,5 @@
 from typing import Self
-from pydantic import BaseModel
-from datetime import (timedelta, 
-                      datetime)
+from datetime import timedelta
 
 from models import (City,
                     Driver,
@@ -18,14 +16,14 @@ from decorators import (are_here_buses,
                         are_here_routes,
                         are_here_departed_buses,
                         are_here_free_buses)
-from formatters import timedelta_to_str
+from serializers import timedelta_to_str
+from utils import (get_selected_object_from_input,
+                   get_bus_active_departure,
+                   get_route_buses,
+                   compose_objects_list_for_selection)
 
 
-class Dispatcher(BaseModel):
-    @are_here_buses
-    @are_here_buses_tied_to_route
-    @are_here_routes
-    @are_here_free_buses
+class Dispatcher:
     def depart_bus(self):
         """
         Метод для відправлення автобусу.
@@ -40,21 +38,20 @@ class Dispatcher(BaseModel):
         Повертає меню з повідомленням про успішне відправлення автобусу.
         """
         try:
-            selected_bus = self._get_selected_object_from_input(self.not_departed_buses)
+            selected_bus = get_selected_object_from_input(AutoStation().analytic.not_departed_buses)
         except ReturnMenu:
-            return self.show_menu()
+            return AutoStation().show_menu()
         else:
             departure = Departure(bus = selected_bus, route = selected_bus.route)
-            self.park.remove_bus(selected_bus)
+            Park().remove_bus(selected_bus)
             departure.start_travel()
             selected_bus.status = BusStatusEnum.ON_THE_ROAD
-            self.departure_list.append(departure)
-            return self.show_menu(f"""
+            AutoStation().departure_list.append(departure)
+            return AutoStation().show_menu(f"""
                 {str(selected_bus)[0].capitalize() + str(selected_bus)[1:]} відправлено у {selected_bus.route}!
             """.strip()) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
     
     
-    @are_here_buses
     def return_bus_to_park(self):
         """
         Метод для повернення автобуса до парку.
@@ -66,24 +63,22 @@ class Dispatcher(BaseModel):
 
         Повертає: None
         """
-        if not self.active_departures:
-            return self.show_menu("[!] Всі автобуси наразі у парку!")
+        if not AutoStation().analytic.active_departures:
+            return AutoStation().show_menu("[!] Всі автобуси наразі у парку!")
 
         try:
-            selected_bus = self._get_selected_object_from_input([departure.bus for departure in self.active_departures])
+            selected_bus = get_selected_object_from_input([departure.bus for departure in AutoStation().analytic.active_departures])
         except ReturnMenu:
-            return self.show_menu()
+            return AutoStation().show_menu()
         else:
             msg = f"Автобус вдало повернено до парку та знято з '{str(selected_bus.route)}'"
-            bus_departure: Departure = self._get_bus_active_departure(selected_bus) # гарантовано, що має бути лише один результат
+            bus_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.active_departures) # гарантовано, що має бути лише один результат
             bus_departure.finish_travel()
-            self.park.add_bus(selected_bus)
+            Park().add_bus(selected_bus)
             selected_bus.status = BusStatusEnum.IN_THE_PARKING
-            return self.show_menu(msg)
+            return AutoStation().show_menu(msg)
     
     
-    @are_here_buses
-    @are_here_routes
     def set_route_for_bus(self):
         """
         Метод для призначення маршруту для автобуса.
@@ -93,37 +88,35 @@ class Dispatcher(BaseModel):
         виводиться повідомлення про це. В іншому випадку, маршрут для автобуса змінюється,
         а автобус додається до нового маршруту.
 
-        Якщо до цього 
-
         Повертає: None
         """
         try:
-            selected_bus = self._get_selected_object_from_input(self.bus_list)
-            selected_route = self._get_selected_object_from_input(self.route_list)
+            selected_bus: Bus = get_selected_object_from_input(AutoStation().bus_list)
+            selected_route: Route = get_selected_object_from_input(AutoStation().route_list)
         except ReturnMenu:
-            return self.show_menu()
+            return AutoStation().show_menu()
         else:
-            bus_active_departure = self._get_bus_active_departure(selected_bus)
+            bus_active_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.active_departures)
 
             if selected_bus.route:
                 if selected_bus.route is selected_route:
-                    return self.show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
+                    return AutoStation().show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
                 
                 msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
                 if bus_active_departure:
                     bus_active_departure.finish_travel()
-                    self.park.add_bus(selected_bus)
+                    Park().add_bus(selected_bus)
                     msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}', а рейс зупинено!\nАвтобус повернено у парк."
 
                 selected_bus.route = selected_route
-                return self.show_menu(msg)
+                return AutoStation().show_menu(msg)
             
             msg = f"Для автобусу встановлено {selected_route}"
             selected_bus.route = selected_route
-            return self.show_menu(msg)
+            return AutoStation().show_menu(msg)
 
 
-class Manager(BaseModel):
+class Manager:
     def create_bus(self):
         """
         Метод для створення нового автобуса та додавання його до парку.
@@ -134,24 +127,23 @@ class Manager(BaseModel):
         None
         """
 
-        bus_number,  driver_first_name, driver_second_name = (
+        bus_number, driver_first_name, driver_second_name = (
             input("Введіть номер автобусу: "),
             input("Введіть ім'я водія: "),
             input("Введіть фамілію водія: ")
         )
-        if bus_number in (bus.number for bus in self.bus_list):
+        if bus_number in (bus.number for bus in AutoStation().bus_list):
             print("\n\n[!] Автобус з таким номером вже існує!")
             return self.create_bus()
         driver = Driver(first_name = driver_first_name, second_name = driver_second_name)
         bus = Bus(number = bus_number, driver = driver)
-        self.park.add_bus(bus)
-        self.bus_list.append(bus)
-        return self.show_menu(f"""
+        Park().add_bus(bus)
+        AutoStation().bus_list.append(bus)
+        return AutoStation().show_menu(f"""
             {str(bus)[0].capitalize() + str(bus)[1:]} успішно створено та відправлено до парку!
         """.strip()) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
     
     
-    @are_here_buses
     def delete_bus(self):
         """
         Метод для видалення автобуса.
@@ -163,19 +155,22 @@ class Manager(BaseModel):
         Повертає: None
         """
         try:
-            selected_bus = self._get_selected_object_from_input(self.bus_list)
+            selected_bus = get_selected_object_from_input(AutoStation().bus_list)
         except ReturnMenu:
-            return self.show_menu()
+            return AutoStation().show_menu()
         else:
-            selected_bus_active_departure = self._get_bus_active_departure(selected_bus)
+            selected_bus_active_departure: Departure = get_bus_active_departure(
+                selected_bus,
+                AutoStation().analytic.active_departures
+            )
             if selected_bus_active_departure:
                 selected_bus_active_departure.finish_travel()
-                self.bus_list.remove(selected_bus)
-                return self.show_menu("Автобус було вдало знято з маршруту та видалено!")
+                AutoStation().bus_list.remove(selected_bus)
+                return AutoStation().show_menu("Автобус було вдало знято з маршруту та видалено!")
             
-            self.park.remove_bus(selected_bus)
-            self.bus_list.remove(selected_bus)
-            return self.show_menu("Автобус було вдало видалено!")
+            Park().remove_bus(selected_bus)
+            AutoStation().bus_list.remove(selected_bus)
+            return AutoStation().show_menu("Автобус було вдало видалено!")
     
     
     def create_route(self):
@@ -192,11 +187,10 @@ class Manager(BaseModel):
             City(title = input("Кінцева точка: "))
         )
         route = Route(start_point = start_point, end_point = end_point)
-        self.route_list.append(route)
-        return self.show_menu("Маршрут вдало створено!")
+        AutoStation().route_list.append(route)
+        return AutoStation().show_menu("Маршрут вдало створено!")
     
     
-    @are_here_routes
     def delete_route(self):
         """
         Метод для видалення маршруту.
@@ -209,31 +203,31 @@ class Manager(BaseModel):
         Повертає: None
         """
         try:
-            selected_route: Route = self._get_selected_object_from_input(self.route_list)
+            selected_route: Route = get_selected_object_from_input(AutoStation().route_list)
         except ReturnMenu:
-            return self.show_menu()
+            return AutoStation().show_menu()
         else:
             msg = "Маршрут вдало видалено!"
-            for bus in self._get_route_buses(selected_route):
-                bus_departure: Departure = self._get_bus_active_departure(bus)
+            for bus in get_route_buses(selected_route, AutoStation().bus_list):
+                bus_departure: Departure = get_bus_active_departure(bus, AutoStation().analytic.active_departures)
                 if bus_departure:
                     bus_departure.finish_travel()
-                    self.park.add_bus(bus)
+                    Park().add_bus(bus)
                 bus.route = None
             else:
                 msg = "Маршрут вдало видалено, а всі його автобуси, що були у дорозі, відправлено до парку!"
-            self.route_list.remove(selected_route)
-            return self.show_menu(msg)
+            AutoStation().route_list.remove(selected_route)
+            return AutoStation().show_menu(msg)
 
 
-class Analytic(BaseModel):
+class Analytic:
     @property
     def active_departures(self) -> list[Departure]:
         """
         Повертає список дійсних відправлень.
         """
         return list(
-            filter(lambda departure: departure.arrival_time is None, self.departure_list)
+            filter(lambda departure: departure.arrival_time is None, AutoStation().departure_list)
         )
 
 
@@ -268,7 +262,7 @@ class Analytic(BaseModel):
         Повертає список автобусів зі списку автобусів, які мають прив'язаний маршрут.
         """
         return list(
-            filter(lambda bus: bus.route is not None, self.bus_list)
+            filter(lambda bus: bus.route is not None, AutoStation().bus_list)
         ) 
     
     
@@ -283,13 +277,13 @@ class Analytic(BaseModel):
 
         Алгоритм роботи функції:
 
-        Список self.bus_list сортується за номером автобуса.
+        Список AutoStation().bus_list сортується за номером автобуса.
 
         Для кожного автобуса:
         - Виводиться заголовок рейсів для даного автобуса.
         - Ініціалізуються змінні total_count і total_time для підрахунку загальної кількості рейсів та часу.
 
-        Для кожного відправлення в self.departure_list:
+        Для кожного відправлення в AutoStation().departure_list:
         * Якщо номер автобуса відправлення співпадає з номером поточного автобуса:
                 - Збільшується лічильник total_count на 1.
                 - Час подорожі перетворюється у формат datetime.
@@ -298,14 +292,14 @@ class Analytic(BaseModel):
         * Виводиться загальна кількість рейсів та загальний час для даного автобуса.
         * Повертається результат функції show_menu().
         """
-        sorted_buses = sorted(self.bus_list, key = lambda bus: bus.number)
+        sorted_buses = sorted(AutoStation().bus_list, key = lambda bus: bus.number)
 
         for bus in sorted_buses:
             print(f"\n\nРейсы '{bus.number} з водієм {bus.driver.first_name}'")
             total_count = 0
             total_time = timedelta()
 
-            for departure in self.departure_list:
+            for departure in AutoStation().departure_list:
                 if departure.bus.number == bus.number:
                     total_count += 1
                     total_time += departure.travel_time
@@ -313,10 +307,10 @@ class Analytic(BaseModel):
 
             print(f"Ітого - {total_count} за {timedelta_to_str(total_time)}")
 
-        return self.show_menu()
+        return AutoStation().show_menu()
 
 
-class AutoStation(BaseModel):
+class AutoStation:
     """
     Клас AutoStation представляє автобусну станцію.
 
@@ -326,17 +320,21 @@ class AutoStation(BaseModel):
     - bus_list: list[Bus] - список автобусів
     - departure_list: list[Departure] - список всіх відправлень автобусів
     """
-    park = Park()
-    route_list: list[Route] = []
-    bus_list: list[Bus] = []
-    departure_list: list[Departure] = []
+    
     __instance = None
+    
 
-
-    def __new__(mcs, *args, **kwargs) -> Self:
-        if not mcs.__instance:
-            mcs.__instance = super().__new__(mcs, *args, **kwargs)
-        return mcs.__instance
+    def __new__(cls, *args, **kwargs) -> Self:
+        if not cls.__instance:
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+            cls.park = Park()
+            cls.route_list: list[Route] = []
+            cls.bus_list: list[Bus] = []
+            cls.departure_list: list[Departure] = []
+            cls.analytic: Analytic = Analytic()
+            cls.manager: Manager = Manager()
+            cls.dispatcher: Dispatcher = Dispatcher()
+        return cls.__instance
 
 
     def show_menu(self, menu_msg: str = None):
@@ -427,26 +425,20 @@ class AutoStation(BaseModel):
         Повертає:
         None
         """
+        return self.manager.create_bus()
 
-        pass
 
-    
-    def departed_buses(self): pass
+    @are_here_buses
+    @are_here_buses_tied_to_route
+    @are_here_routes
+    @are_here_free_buses
+    def depart_bus(self):
+        return self.dispatcher.depart_bus()
         
 
     @are_here_buses
     def return_bus_to_park(self):
-        """
-        Метод для повернення автобуса до парку.
-
-        Користувачеві буде запропоновано вибрати автобус зі списку.
-        Після вибору, перевіряється поточний маршрут автобуса.
-        Якщо автобус вже знаходиться у парку, виводиться відповідне повідомлення.
-        В іншому випадку, автобус повертається до парку, його маршрут знімається.
-
-        Повертає: None
-        """
-        pass
+        return self.dispatcher.return_bus_to_park()
         
 
     @are_here_buses
@@ -486,30 +478,16 @@ class AutoStation(BaseModel):
     @are_here_buses
     @are_here_routes
     def set_route_for_bus(self):
-        """
-        Метод для призначення маршруту для автобуса.
-
-        Користувачеві буде запропоновано вибрати автобус та маршрут зі списку.
-        Після вибору, перевіряється поточний маршрут автобуса. Якщо він вже співпадає з обраним,
-        виводиться повідомлення про це. В іншому випадку, маршрут для автобуса змінюється,
-        а автобус додається до нового маршруту.
-
-        Якщо до цього 
-
-        Повертає: None
-        """
-        pass
+        return self.dispatcher.set_route_for_bus()
 
 
     @are_here_buses
     def delete_bus(self):
-        
-        pass
+        return self.manager.delete_bus()
     
 
     def create_route(self):
-        
-        pass
+        return self.manager.create_route()
     
 
     @are_here_buses
@@ -524,156 +502,47 @@ class AutoStation(BaseModel):
         Повертає: None
         """
         try:
-            selected_route = self._get_selected_object_from_input(self.route_list)
+            selected_route = get_selected_object_from_input(self.route_list)
         except ReturnMenu:
             return self.show_menu()
         else:
-            buses_in_selected_route = self._get_route_buses(selected_route)
+            buses_in_selected_route = get_route_buses(selected_route, self.bus_list)
             if not buses_in_selected_route:
                 return self.show_menu(f"[!] Автобуси у '{selected_route}' відсутні!")
             msg = f"У '{selected_route}' такі автобуси: \n"
-            buses = self._compose_objects_list_for_selection(buses_in_selected_route)
+            buses = compose_objects_list_for_selection(buses_in_selected_route)
             return self.show_menu(msg + '\n'.join(buses))
     
 
     @are_here_routes
     def delete_route(self):
-        
-        pass
+        return self.manager.delete_route()
     
 
     @are_here_buses
     @are_here_departures
     def show_analytics(self):
-
-        pass
+        return self.analytic.analyze_buses()
         
 
     @property
     def active_departures(self) -> list[Departure]:
-        
-        pass
+        return self.analytic.active_departures
     
 
     @property
     def departed_buses(self) -> list[Bus]:
-        
-        if not self.buses_tied_to_route:
-            raise NoBusesWithRoute()
-        return [departure.bus for departure in self.active_departures]
+        return self.analytic.departed_buses
     
 
     @property
     def not_departed_buses(self) -> list[Bus]:
-        
-        pass
+        return self.analytic.not_departed_buses
     
 
     @property
     def buses_tied_to_route(self) -> list[Bus]:
-        
-        pass
-    
-    
-    def _get_bus_active_departure(self, bus: Bus) -> Departure | None:
-        """
-        Приватний метод, який повертає активне відправлення для заданого автобуса.
-        """
-        bus_departure: tuple[Departure] = tuple(
-            filter(lambda departure: departure.bus == bus, self.active_departures)
-        )
-        if bus_departure: # гарантовано, що не більше 1
-                          # адже відправити один автобус два рази на маршрут - неможливо
-            return bus_departure[0]
-        else: 
-            return None
-        
-
-    def _get_route_buses(self, route: Route) -> list[Bus]:
-        """
-        Приватний метод, який повертає список автобусів, прив'язаних до вказаного маршруту.
-        """
-        return list(
-            filter(lambda bus: bus.route is route, self.bus_list)
-        )
-
-
-    def _get_selected_object_from_input(self, objects: list[Bus | Route]) -> Bus | Route:
-        """
-        Метод для отримання обраного об'єкта зі списку.
-
-        Приймає список об'єктів `objects`, з якого користувач має обрати один об'єкт.
-        Виводиться список об'єктів для вибору. Після вибору, перевіряється чи обрана опція
-        є в списку валідних опцій. Якщо обрана опція є останньою (повернення до меню),
-        викликається виняток ReturnMenu. В іншому випадку, повертається обраний об'єкт.
-
-        Параметри:
-        - objects (list[Bus | Route]): Список об'єктів для вибору.
-
-        Повертає:
-        - Bus | Route: Обраний об'єкт.
-
-        Викидає:
-        - ReturnMenu: Якщо обрана опція - повернення до меню.
-        """
-        options = self._compose_objects_list_for_selection(objects)
-        options.append(f'[{len(options)}] - повернутись до меню: ')
-
-        try:
-            selected_option = int(input('\n'.join(options)) + '\n\n')
-        except ValueError:
-            print('\n\n [!] Введено не цифру/число!')
-            return self._get_selected_object_from_input(objects)
-        else:
-            if self._is_answer_existent(options, selected_option):
-                if selected_option == range(len(options))[-1]:
-                    raise ReturnMenu()
-                selected_object = objects[selected_option]
-                return selected_object
-            else:
-                print("\n\n [!] Обрана неіснуюча опція :(")
-                return self._get_selected_object_from_input(objects)
-    
-
-    def _compose_objects_list_for_selection(self, objects: list[Bus | Route]) -> list[str]:
-        """
-        Метод для створення списку об'єктів для вибору.
-
-        Приймає список об'єктів `objects` і створює список опцій для вибору об'єкта.
-        Кожна опція має вигляд `[індекс] - назва_об'єкта`.
-
-        Параметри:
-        - objects (list[Bus | Route]): Список об'єктів.
-
-        Повертає:
-        - list[str]: Список опцій для вибору об'єкта.
-        """
-        options = []
-        for option_index, object in enumerate(objects):
-            options.append(
-                f"[{option_index}] - {object}"
-            )
-        return options
-            
-    
-    def _is_answer_existent(self, options: list[str], selected_option: int) -> bool:
-        """
-        Метод для перевірки, чи обрана опція існує у списку опцій.
-
-        Приймає список опцій `options` і обрану опцію `selected_option`.
-        Перевіряє, чи обрана опція є в діапазоні індексів списку опцій.
-
-        Параметри:
-        - options (list[str]): Список опцій.
-        - selected_option (int): Обрана опція.
-
-        Повертає:
-        - bool: True, якщо обрана опція існує, False - в іншому випадку.
-        """
-        options_range = range(len(options))
-        if selected_option in options_range:
-            return True
-        return False
+        return self.analytic.buses_tied_to_route
             
 
 if __name__ == "__main__":

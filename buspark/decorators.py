@@ -1,4 +1,3 @@
-
 def are_here_buses(func):
     def wrapper(self, *args, **kwargs):
         """
