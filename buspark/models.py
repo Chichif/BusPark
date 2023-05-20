@@ -50,7 +50,6 @@ class Bus(BaseModel):
 
 class Departure(BaseModel): 
     bus: Bus
-    route: Route
     departure_time: datetime = None
     arrival_time: datetime | None = None
 

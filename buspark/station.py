@@ -36,7 +36,7 @@ class AutoStation(BaseModel):
     departure_list: list[Departure] = []
     __instance = None
 
-    
+
     def __new__(mcs, *args, **kwargs) -> Self:
         if not mcs.__instance:
             mcs.__instance = super().__new__(mcs, *args, **kwargs)
@@ -419,7 +419,7 @@ class AutoStation(BaseModel):
                 if departure.bus.number == bus.number:
                     total_count += 1
                     total_time += departure.travel_time
-                    print(f'{departure.route} | {timedelta_to_str(departure.travel_time)}')
+                    print(f'{departure.bus.route} | {timedelta_to_str(departure.travel_time)}')
 
             print(f"Ітого - {total_count} за {timedelta_to_str(total_time)}")
 
