@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from enum import Enum
-from datetime import datetime
+from datetime import (datetime, 
+                      timedelta)
 
 
 class City(BaseModel):
@@ -14,7 +15,7 @@ class Route(BaseModel):
     start_point: City
     end_point: City
 
-    
+
     def __str__(self) -> str:
         return f'маршрут {self.start_point} - {self.end_point}'
     
@@ -29,9 +30,9 @@ class Driver(BaseModel):
     second_name: str
 
     @property
-    def initials(self):
+    def initials(self) -> str:
         return f"{self.first_name[0].capitalize()}. {self.second_name[0].capitalize()}."
-    
+
     def __str__(self) -> str:
         return self.initials
 
@@ -64,20 +65,21 @@ class Departure(BaseModel):
 
 
     @property
-    def travel_time(self) -> str:
+    def travel_time(self) -> timedelta:
         if not self.arrival_time:
             time_difference = datetime.now() - self.departure_time
         else:
             time_difference = self.arrival_time - self.departure_time
-        hours = time_difference.total_seconds() // 3600
-        minutes = (time_difference.total_seconds() // 60) % 60
-        seconds = time_difference.total_seconds() % 60
-
-        time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-        return time_str
+        return time_difference
 
 
 class Park(BaseModel):
+    __instance = None
+    def __new__(mcs, *args, **kwargs):
+        if not mcs.__instance:
+            mcs.__instance = super().__new__(mcs, *args, **kwargs)
+        return mcs.__instance
+    
     bus_list: list[Bus] = []
 
     def add_bus(self, bus: Bus):
