@@ -1,3 +1,4 @@
+from typing import Self
 from pydantic import BaseModel
 from enum import Enum
 from datetime import (datetime, 
@@ -75,7 +76,7 @@ class Departure(BaseModel):
 
 class Park(BaseModel):
     __instance = None
-    def __new__(mcs, *args, **kwargs):
+    def __new__(mcs, *args, **kwargs) -> Self:
         if not mcs.__instance:
             mcs.__instance = super().__new__(mcs, *args, **kwargs)
         return mcs.__instance
@@ -89,5 +90,5 @@ class Park(BaseModel):
         self.bus_list.remove(bus)
 
     @property
-    def parked_buses(self):
+    def parked_buses(self) -> list[Bus]:
         return self.bus_list

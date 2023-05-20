@@ -1,3 +1,4 @@
+from typing import Self
 from pydantic import BaseModel
 from datetime import (timedelta, 
                       datetime)
@@ -33,6 +34,13 @@ class AutoStation(BaseModel):
     route_list: list[Route] = []
     bus_list: list[Bus] = []
     departure_list: list[Departure] = []
+    __instance = None
+
+    
+    def __new__(mcs, *args, **kwargs) -> Self:
+        if not mcs.__instance:
+            mcs.__instance = super().__new__(mcs, *args, **kwargs)
+        return mcs.__instance
 
 
     def show_menu(self, menu_msg: str = None):
@@ -355,7 +363,7 @@ class AutoStation(BaseModel):
         Повертає: None
         """
         try:
-            selected_route = self._get_selected_object_from_input(self.route_list)
+            selected_route: Route = self._get_selected_object_from_input(self.route_list)
         except ReturnMenu:
             return self.show_menu()
         else:
@@ -444,7 +452,7 @@ class AutoStation(BaseModel):
     
 
     @property
-    def not_departed_buses(self):
+    def not_departed_buses(self) -> list[Bus]:
         """
         Повертає список автобусів прив'язених до маршрутів, які ще не були відправлені.
         """
@@ -544,7 +552,7 @@ class AutoStation(BaseModel):
         return options
             
     
-    def _is_answer_existent(self, options: list[str], selected_option: int):
+    def _is_answer_existent(self, options: list[str], selected_option: int) -> bool:
         """
         Метод для перевірки, чи обрана опція існує у списку опцій.
 
