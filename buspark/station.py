@@ -49,7 +49,7 @@ class Dispatcher:
             return selected_bus, departure
     
     
-    def return_bus_to_park(self):
+    def return_bus_to_park(self, active_departures: list[Departure]):
         """
         Метод для повернення автобуса до парку.
 
@@ -60,23 +60,21 @@ class Dispatcher:
 
         Повертає: None
         """
-        if not AutoStation().analytic.get_active_departures(AutoStation().departure_list):
-            return AutoStation().show_menu("[!] Всі автобуси наразі у парку!")
-
         try:
-            selected_bus = get_selected_object_from_input([departure.bus for departure in AutoStation().analytic.get_active_departures(AutoStation().departure_list)])
+            selected_bus = get_selected_object_from_input([departure.bus for departure in active_departures])
         except ReturnMenu:
-            return AutoStation().show_menu()
+            raise ReturnMenu()
         else:
-            msg = f"Автобус вдало повернено до парку та знято з '{str(selected_bus.route)}'"
-            bus_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.get_active_departures(AutoStation().departure_list)) # гарантовано, що має бути лише один результат
+            bus_departure: Departure = get_bus_active_departure(selected_bus, active_departures) # гарантовано, що має бути лише один результат
             bus_departure.finish_travel()
             Park().add_bus(selected_bus)
             selected_bus.status = BusStatusEnum.IN_THE_PARKING
-            return AutoStation().show_menu(msg)
+            return selected_bus
     
     
-    def set_route_for_bus(self):
+    def set_route_for_bus(self, bus_list: list[Bus], 
+                                route_list: list[Route],
+                                active_departures: list[Departure]):
         """
         Метод для призначення маршруту для автобуса.
 
@@ -88,29 +86,29 @@ class Dispatcher:
         Повертає: None
         """
         try:
-            selected_bus: Bus = get_selected_object_from_input(AutoStation().bus_list)
-            selected_route: Route = get_selected_object_from_input(AutoStation().route_list)
+            selected_bus: Bus = get_selected_object_from_input(bus_list)
+            selected_route: Route = get_selected_object_from_input(route_list)
         except ReturnMenu:
-            return AutoStation().show_menu()
-        else:
-            bus_active_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.get_active_departures(AutoStation().departure_list))
+            raise ReturnMenu()
+        
+        if selected_bus.route == selected_route:
+            return "[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено."
 
-            if selected_bus.route:
-                if selected_bus.route is selected_route:
-                    return AutoStation().show_menu("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
-                
-                msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}'"
-                if bus_active_departure:
-                    bus_active_departure.finish_travel()
-                    Park().add_bus(selected_bus)
-                    msg = f"Маршрут автобусу було змінено з '{selected_bus.route}' на '{selected_route}', а рейс зупинено!\nАвтобус повернено у парк."
+        msg = self.change_route(selected_bus, selected_route, active_departures)
+        return msg
 
-                selected_bus.route = selected_route
-                return AutoStation().show_menu(msg)
-            
-            msg = f"Для автобусу встановлено {selected_route}"
-            selected_bus.route = selected_route
-            return AutoStation().show_menu(msg)
+
+    def change_route(self, bus: Bus, route: Route, active_departures: list[Departure]) -> str:
+        bus_active_departure = get_bus_active_departure(bus, active_departures)
+
+        msg = f"Маршрут автобусу було змінено з '{bus.route}' на '{route}'"
+        if bus_active_departure:
+            bus_active_departure.finish_travel()
+            Park().add_bus(bus)
+            msg = f"Маршрут автобусу було змінено з '{bus.route}' на '{route}', а рейс зупинено!\nАвтобус повернено у парк."            
+
+        bus.route = route
+        return msg
 
 
 class Manager:
@@ -421,7 +419,11 @@ class AutoStation:
     @are_here_routes
     @are_here_free_buses
     def depart_bus(self):
-        selected_bus, departure = self.dispatcher.depart_bus(self.analytic.not_departed_buses)
+        try:
+            selected_bus, departure = self.dispatcher.depart_bus(self.analytic.not_departed_buses)
+        except ReturnMenu:
+            return self.show_menu()
+        
         self.departure_list.append(departure)
         return self.show_menu(
             f"{str(selected_bus)[0].capitalize() + str(selected_bus)[1:]} відправлено у {selected_bus.route}!".strip()
@@ -430,7 +432,17 @@ class AutoStation:
 
     @are_here_buses
     def return_bus_to_park(self):
-        return self.dispatcher.return_bus_to_park()
+        active_departures = self.analytic.get_active_departures(self.departure_list)
+        if not active_departures:
+            return self.show_menu("[!] Всі автобуси наразі у парку!")
+        
+        try:
+            selected_bus = self.dispatcher.return_bus_to_park(active_departures)
+        except ReturnMenu:
+            return self.show_menu()
+        
+        msg = f"Автобус вдало повернено до парку та знято з '{selected_bus.route}'"
+        return self.show_menu(msg)
         
 
     @are_here_buses
@@ -470,7 +482,13 @@ class AutoStation:
     @are_here_buses
     @are_here_routes
     def set_route_for_bus(self):
-        return self.dispatcher.set_route_for_bus()
+        try:
+            msg = self.dispatcher.set_route_for_bus(self.bus_list, 
+                                                    self.route_list, 
+                                                    self.analytic.get_active_departures(self.departure_list))
+        except ReturnMenu:
+            return self.show_menu()
+        return self.show_menu(msg)
 
 
     @are_here_buses
