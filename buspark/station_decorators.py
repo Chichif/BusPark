@@ -19,7 +19,7 @@ def are_here_buses_tied_to_route(func):
 
         Якщо жодного автобусу немає, виводить повідомлення про створення нового автобусу.
         """
-        if not self.buses_tied_to_route:
+        if not self.analytic.get_buses_tied_to_route(self.bus_list):
             return self.show_menu("[!] Жодного автобусу з прив'язаним маршрутом не існує!")
         return func(self, *args, **kwargs)
     return wrapper
@@ -33,7 +33,8 @@ def are_here_free_buses(func):
 
         Якщо жодного автобусу немає, виводить повідомлення про створення нового автобусу.
         """
-        if not self.not_departed_buses:
+        if not self.analytic.get_not_departed_buses(self.departure_list, 
+                                                    self.analytic.get_buses_tied_to_route(self.bus_list)):
             return self.show_menu("[!] Усі автобуси у дорозі, вільних немає!")
         return func(self, *args, **kwargs)
     return wrapper
@@ -59,7 +60,7 @@ def are_here_departed_buses(func):
 
         Якщо жодного активного відправлення немає, виводить повідомлення про відсутність автобусів у дорозі.
         """
-        if not self.active_departures:
+        if not self.analytic.get_active_departures(self.departure_list):
             return self.show_menu("[!] Автобуси у дорозі відсутні!")
         return func(self, *args, **kwargs)
     return wrapper
