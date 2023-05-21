@@ -104,7 +104,10 @@ class Dispatcher:
             str: Сигнал з результатом зміни маршруту.
 
         Raises:
-            ReturnMenu: Виключення, яке сигналізує про повернення до головного меню.
+        1. ReturnMenu: Виключення, яке сигналізує про повернення до головного меню.
+        2. RouteSet: Сигнал з результатом встановлення маршруту.
+        3. RouteChangedDuringDeparture: Сигнал з результатом зміни маршруту під час відправлення.
+        4. SameRouteSelected: Сигнал з повідомленням, що обраний маршрут наразі актуальний. 
         """
         try:
             selected_bus: Bus = get_object_from_suggested_options(bus_list)
@@ -123,7 +126,7 @@ class Dispatcher:
             raise RouteSet(str(ex))
 
 
-    def change_route(self, bus: Bus, route: Route, active_departures: list[Departure]) -> str:
+    def change_route(self, bus: Bus, route: Route, active_departures: list[Departure]):
         """Змінює маршрут для обраного автобуса.
 
         Параметри:
@@ -140,8 +143,9 @@ class Dispatcher:
         3. Зміна маршруту для обраного автобуса.
         4. Повернення повідомлення з результатом зміни маршруту.
 
-        Returns:
-            str: Сигнал з результатом зміни маршруту.
+        Raises:
+        1. RouteSet: Сигнал з результатом встановлення маршруту.
+        2. RouteChangedDuringDeparture: Сигнал з результатом зміни маршруту під час відправлення.
         """
         bus_active_departure = get_bus_active_departure(bus, active_departures)
 
@@ -208,19 +212,16 @@ class Manager:
         except ReturnMenu:
             raise ReturnMenu()
         else:
-            selected_bus_active_departure: Departure = get_bus_active_departure(
-                                                            selected_bus,
-                                                            active_departures
-                                                        )
+            selected_bus_active_departure: Departure = get_bus_active_departure(selected_bus,
+                                                                                active_departures)
             if selected_bus_active_departure:
                 selected_bus_active_departure.finish_travel()
                 bus_list.remove(selected_bus)
                 return
-            
             Park().remove_bus(selected_bus)
     
     
-    def create_route(self):
+    def create_route(self) -> Route:
         """Створює новий маршрут.
 
         Кроки:
@@ -236,9 +237,8 @@ class Manager:
             City(title = input("Початкова точка: ")),
             City(title = input("Кінцева точка: "))
         )
-        route = Route(start_point = start_point, end_point = end_point)
-        return route
-    
+        return Route(start_point = start_point, end_point = end_point)
+
     
     def delete_route(self, 
                      route_list: list[Route], 
@@ -276,7 +276,6 @@ class Manager:
                     Park().add_bus(bus)
                 bus.route = None
             route_list.remove(selected_route)
-
 
 
 class Analytic:
