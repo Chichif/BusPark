@@ -7,7 +7,10 @@ from models import (Bus,
                     Park,
                     Route,
                     Departure)
-from exceptions import ReturnMenu
+from signals import (ReturnMenu, 
+                     SameRouteSelected,
+                     RouteChangedDuringDeparture,
+                     RouteSet)
 from station_decorators import (are_here_buses,
                                 are_here_buses_tied_to_route,
                                 are_here_departures, 
@@ -260,12 +263,17 @@ class AutoStation:
             Результат виклику show_menu з повідомленням про встановлення маршруту для автобуса.
         """
         try:
-            msg = self.dispatcher.set_route_for_bus(self.bus_list, 
+            self.dispatcher.set_route_for_bus(self.bus_list, 
                                                     self.route_list, 
                                                     self.analytic.get_active_departures(self.departure_list))
         except ReturnMenu:
             return self.show_menu()
-        return self.show_menu(msg)
+        except SameRouteSelected as ex:
+            return self.show_menu(str(ex))
+        except RouteChangedDuringDeparture as ex:
+            return self.show_menu(str(ex))
+        except RouteSet as ex:
+            return self.show_menu(str(ex))
 
 
     @are_here_buses

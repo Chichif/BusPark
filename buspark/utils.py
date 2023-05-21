@@ -1,7 +1,7 @@
 from models import (Bus,
                     Route,
                     Departure)
-from exceptions import ReturnMenu
+from signals import ReturnMenu
 
 
 def get_object_from_suggested_options(objects: list[Bus | Route]) -> Bus | Route:

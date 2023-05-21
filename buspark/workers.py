@@ -11,7 +11,10 @@ from models import (City,
 from utils import (get_object_from_suggested_options,
                    get_bus_active_departure,
                    get_route_buses)
-from exceptions import ReturnMenu
+from signals import (ReturnMenu,
+                     SameRouteSelected,
+                     RouteChangedDuringDeparture,
+                     RouteSet)
 
 
 class Dispatcher:
@@ -47,7 +50,7 @@ class Dispatcher:
             return selected_bus, departure
     
     
-    def return_bus_to_park(self, active_departures: list[Departure]):
+    def return_bus_to_park(self, active_departures: list[Departure]) -> Bus:
         """Повертає обраний автобус у парк.
 
         Параметри:
@@ -98,7 +101,7 @@ class Dispatcher:
         5. Повернення повідомлення з результатом зміни маршруту.
 
         Returns:
-            str: Повідомлення з результатом зміни маршруту.
+            str: Сигнал з результатом зміни маршруту.
 
         Raises:
             ReturnMenu: Виключення, яке сигналізує про повернення до головного меню.
@@ -110,10 +113,14 @@ class Dispatcher:
             raise ReturnMenu()
         
         if selected_bus.route == selected_route:
-            return "[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено."
+            raise SameRouteSelected("[!] Обрано один й той самий маршрут для автобусу, ніяких змін не внесено.")
 
-        msg = self.change_route(selected_bus, selected_route, active_departures)
-        return msg
+        try:
+            self.change_route(selected_bus, selected_route, active_departures)
+        except RouteChangedDuringDeparture as ex:
+            raise RouteChangedDuringDeparture(str(ex))
+        except RouteSet as ex:
+            raise RouteSet(str(ex))
 
 
     def change_route(self, bus: Bus, route: Route, active_departures: list[Departure]) -> str:
@@ -134,18 +141,16 @@ class Dispatcher:
         4. Повернення повідомлення з результатом зміни маршруту.
 
         Returns:
-            str: Повідомлення з результатом зміни маршруту.
+            str: Сигнал з результатом зміни маршруту.
         """
         bus_active_departure = get_bus_active_departure(bus, active_departures)
 
-        msg = f"Встановлено '{route}'!"
         if bus_active_departure:
             bus_active_departure.finish_travel()
             Park().add_bus(bus)
-            msg = f"Маршрут автобусу було змінено з '{bus.route}' на '{route}', а рейс зупинено!\nАвтобус повернено у парк."            
-
+            raise RouteChangedDuringDeparture(f"Маршрут автобусу було змінено з '{bus.route}' на '{route}', а рейс зупинено!\nАвтобус повернено у парк.")   
         bus.route = route
-        return msg
+        raise RouteSet(f"Встановлено '{route}'!")
 
 
 class Manager:
