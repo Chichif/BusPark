@@ -4,7 +4,7 @@ from models import (Bus,
 from exceptions import ReturnMenu
 
 
-def get_selected_object_from_input(objects: list[Bus | Route]) -> Bus | Route:
+def get_object_from_suggested_options(objects: list[Bus | Route]) -> Bus | Route:
         """
         Метод для отримання обраного об'єкта зі списку.
 
@@ -29,7 +29,7 @@ def get_selected_object_from_input(objects: list[Bus | Route]) -> Bus | Route:
             selected_option = int(input('\n'.join(options)) + '\n\n')
         except ValueError:
             print('\n\n [!] Введено не цифру/число!')
-            return get_selected_object_from_input(objects)
+            return get_object_from_suggested_options(objects)
         else:
             if is_answer_existent(options, selected_option):
                 if selected_option == range(len(options))[-1]:
@@ -38,66 +38,70 @@ def get_selected_object_from_input(objects: list[Bus | Route]) -> Bus | Route:
                 return selected_object
             else:
                 print("\n\n [!] Обрана неіснуюча опція :(")
-                return get_selected_object_from_input(objects)
+                return get_object_from_suggested_options(objects)
             
 
 def get_bus_active_departure(bus: Bus, active_departures: list[Departure]) -> Departure | None:
-        """
-        Приватний метод, який повертає активне відправлення для заданого автобуса.
-        """
-        bus_departure: tuple[Departure] = tuple(
-            filter(lambda departure: departure.bus == bus, active_departures)
-        )
-        if bus_departure: # гарантовано, що не більше 1
-                          # адже відправити один автобус два рази на маршрут - неможливо
-            return bus_departure[0]
-        else: 
-            return None
-        
+    """Повертає активний рейс автобуса.
+
+    Параметри:
+        bus (Bus): Автобус.
+        active_departures (list[Departure]): Список активних рейсів.
+
+    Returns:
+        Departure | None: Об'єкт рейсу, в якому знаходиться автобус, або None, якщо автобус не знаходиться у жодному активному рейсі.
+    """
+    bus_departure: tuple[Departure] = tuple(
+        filter(lambda departure: departure.bus == bus, active_departures)
+    )
+    if bus_departure: # гарантовано, що не більше 1
+                        # адже відправити один автобус два рази на маршрут - неможливо
+        return bus_departure[0]
+    else: 
+        return None
+    
 
 def get_route_buses(route: Route, bus_list: list[Bus]) -> list[Bus]:
-        """
-        Приватний метод, який повертає список автобусів, прив'язаних до вказаного маршруту.
-        """
-        return list(
-            filter(lambda bus: bus.route is route, bus_list)
-        )
+    """Повертає список автобусів, які обслуговують заданий маршрут.
+
+    Параметри:
+        route (Route): Маршрут.
+        bus_list (list[Bus]): Список автобусів.
+
+    Returns:
+        list[Bus]: Список автобусів, які обслуговують заданий маршрут.
+    """
+    return list(
+        filter(lambda bus: bus.route is route, bus_list)
+    )
         
 
 def compose_objects_list_for_selection(objects: list[Bus | Route]) -> list[str]:
-        """
-        Метод для створення списку об'єктів для вибору.
+    """Створює список рядків для вибору об'єктів.
 
-        Приймає список об'єктів `objects` і створює список опцій для вибору об'єкта.
-        Кожна опція має вигляд `[індекс] - назва_об'єкта`.
+    Параметри:
+        objects (list[Bus | Route]): Список об'єктів.
 
-        Параметри:
-        - objects (list[Bus | Route]): Список об'єктів.
-
-        Повертає:
-        - list[str]: Список опцій для вибору об'єкта.
-        """
-        options = []
-        for option_index, object in enumerate(objects):
-            options.append(
-                f"[{option_index}] - {object}"
-            )
-        return options
+    Returns:
+        list[str]: Список рядків для вибору об'єктів.
+    """
+    options = []
+    for option_index, object in enumerate(objects):
+        options.append(
+            f"[{option_index}] - {object}"
+        )
+    return options
             
     
 def is_answer_existent(options: list[str], selected_option: int) -> bool:
-    """
-    Метод для перевірки, чи обрана опція існує у списку опцій.
-
-    Приймає список опцій `options` і обрану опцію `selected_option`.
-    Перевіряє, чи обрана опція є в діапазоні індексів списку опцій.
+    """Перевіряє, чи існує вибраний варіант в списку.
 
     Параметри:
-    - options (list[str]): Список опцій.
-    - selected_option (int): Обрана опція.
+        options (list[str]): Список варіантів.
+        selected_option (int): Вибраний варіант.
 
-    Повертає:
-    - bool: True, якщо обрана опція існує, False - в іншому випадку.
+    Returns:
+        bool: True, якщо вибраний варіант існує в списку, False - в іншому випадку.
     """
     options_range = range(len(options))
     if selected_option in options_range:
