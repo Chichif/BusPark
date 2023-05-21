@@ -7,9 +7,9 @@ from models import (City,
                     Park,
                     Route,
                     Departure,
-                    BusStatusEnum)
-from exceptions import (ReturnMenu,
-                        NoBusesWithRoute)
+                    BusStatusEnum,
+                    BusDepartureResults)
+from exceptions import ReturnMenu
 from decorators import (are_here_buses,
                         are_here_buses_tied_to_route,
                         are_here_departures, 
@@ -24,7 +24,7 @@ from utils import (get_selected_object_from_input,
 
 
 class Dispatcher:
-    def depart_bus(self):
+    def depart_bus(self, not_departed_buses: list[Bus]):
         """
         Метод для відправлення автобусу.
 
@@ -38,18 +38,15 @@ class Dispatcher:
         Повертає меню з повідомленням про успішне відправлення автобусу.
         """
         try:
-            selected_bus = get_selected_object_from_input(AutoStation().analytic.not_departed_buses)
+            selected_bus = get_selected_object_from_input(not_departed_buses)
         except ReturnMenu:
-            return AutoStation().show_menu()
+            raise ReturnMenu()
         else:
             departure = Departure(bus = selected_bus, route = selected_bus.route)
             Park().remove_bus(selected_bus)
             departure.start_travel()
             selected_bus.status = BusStatusEnum.ON_THE_ROAD
-            AutoStation().departure_list.append(departure)
-            return AutoStation().show_menu(f"""
-                {str(selected_bus)[0].capitalize() + str(selected_bus)[1:]} відправлено у {selected_bus.route}!
-            """.strip()) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
+            return selected_bus, departure
     
     
     def return_bus_to_park(self):
@@ -63,16 +60,16 @@ class Dispatcher:
 
         Повертає: None
         """
-        if not AutoStation().analytic.active_departures:
+        if not AutoStation().analytic.get_active_departures(AutoStation().departure_list):
             return AutoStation().show_menu("[!] Всі автобуси наразі у парку!")
 
         try:
-            selected_bus = get_selected_object_from_input([departure.bus for departure in AutoStation().analytic.active_departures])
+            selected_bus = get_selected_object_from_input([departure.bus for departure in AutoStation().analytic.get_active_departures(AutoStation().departure_list)])
         except ReturnMenu:
             return AutoStation().show_menu()
         else:
             msg = f"Автобус вдало повернено до парку та знято з '{str(selected_bus.route)}'"
-            bus_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.active_departures) # гарантовано, що має бути лише один результат
+            bus_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.get_active_departures(AutoStation().departure_list)) # гарантовано, що має бути лише один результат
             bus_departure.finish_travel()
             Park().add_bus(selected_bus)
             selected_bus.status = BusStatusEnum.IN_THE_PARKING
@@ -96,7 +93,7 @@ class Dispatcher:
         except ReturnMenu:
             return AutoStation().show_menu()
         else:
-            bus_active_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.active_departures)
+            bus_active_departure: Departure = get_bus_active_departure(selected_bus, AutoStation().analytic.get_active_departures(AutoStation().departure_list))
 
             if selected_bus.route:
                 if selected_bus.route is selected_route:
@@ -209,7 +206,7 @@ class Manager:
         else:
             msg = "Маршрут вдало видалено!"
             for bus in get_route_buses(selected_route, AutoStation().bus_list):
-                bus_departure: Departure = get_bus_active_departure(bus, AutoStation().analytic.active_departures)
+                bus_departure: Departure = get_bus_active_departure(bus, AutoStation().analytic.get_active_departures(AutoStation().departure_list))
                 if bus_departure:
                     bus_departure.finish_travel()
                     Park().add_bus(bus)
@@ -221,13 +218,12 @@ class Manager:
 
 
 class Analytic:
-    @property
-    def active_departures(self) -> list[Departure]:
+    def get_active_departures(self, departure_list: list[Departure]) -> list[Departure]:
         """
         Повертає список дійсних відправлень.
         """
         return list(
-            filter(lambda departure: departure.arrival_time is None, AutoStation().departure_list)
+            filter(lambda departure: departure.arrival_time is None, departure_list)
         )
 
 
@@ -241,9 +237,7 @@ class Analytic:
 
         Повертає список автобусів, які були відправлені і досі їдуть.
         """
-        if not self.buses_tied_to_route:
-            raise NoBusesWithRoute()
-        return [departure.bus for departure in self.active_departures]
+        return [departure.bus for departure in self.get_active_departures(AutoStation().departure_list)]
     
     
     @property
@@ -266,7 +260,7 @@ class Analytic:
         ) 
     
     
-    def analyze_buses(self) -> None:
+    def analyze_buses(self, bus_list: list[Bus], departure_list: list[Departure]) -> list[BusDepartureResults]:
         """
 
         Підраховує кількість рейсів для кожного автобуса та обчислює загальний час, 
@@ -277,37 +271,39 @@ class Analytic:
 
         Алгоритм роботи функції:
 
-        Список AutoStation().bus_list сортується за номером автобуса.
+        Список bus_list сортується за номером автобуса.
 
         Для кожного автобуса:
         - Виводиться заголовок рейсів для даного автобуса.
         - Ініціалізуються змінні total_count і total_time для підрахунку загальної кількості рейсів та часу.
 
-        Для кожного відправлення в AutoStation().departure_list:
+        Для кожного відправлення в departure_list:
         * Якщо номер автобуса відправлення співпадає з номером поточного автобуса:
                 - Збільшується лічильник total_count на 1.
                 - Час подорожі перетворюється у формат datetime.
                 - Час подорожі додається до загального часу total_time.
                 - Виводиться інформація про маршрут та час подорожі.
         * Виводиться загальна кількість рейсів та загальний час для даного автобуса.
-        * Повертається результат функції show_menu().
         """
-        sorted_buses = sorted(AutoStation().bus_list, key = lambda bus: bus.number)
-
+        sorted_buses = sorted(bus_list, key = lambda bus: bus.number)
+        results = []
         for bus in sorted_buses:
-            print(f"\n\nРейсы '{bus.number} з водієм {bus.driver.first_name}'")
             total_count = 0
             total_time = timedelta()
+            bus_results_kwargs = {"bus": bus, "departures": []}
 
-            for departure in AutoStation().departure_list:
-                if departure.bus.number == bus.number:
-                    total_count += 1
-                    total_time += departure.travel_time
-                    print(f'{departure.bus.route} | {timedelta_to_str(departure.travel_time)}')
-
-            print(f"Ітого - {total_count} за {timedelta_to_str(total_time)}")
-
-        return AutoStation().show_menu()
+            for departure in filter(lambda departure: departure.bus == bus, departure_list):
+                total_count += 1
+                total_time += departure.travel_time
+                bus_results_kwargs["departures"].append(
+                    departure
+                )
+            bus_results_kwargs.update({
+                "total_count": total_count,
+                "total_time": total_time
+            })
+            results.append(BusDepartureResults(**bus_results_kwargs))
+        return results
 
 
 class AutoStation:
@@ -417,14 +413,6 @@ class AutoStation:
 
 
     def create_bus(self):
-        """
-        Метод для створення нового автобуса та додавання його до парку.
-        Користувачу будуть запропоновані ввести номер автобуса та ім'я водія.
-        Після цього автобус буде створено, додано до парку та до списку автобусів.
-
-        Повертає:
-        None
-        """
         return self.manager.create_bus()
 
 
@@ -433,7 +421,11 @@ class AutoStation:
     @are_here_routes
     @are_here_free_buses
     def depart_bus(self):
-        return self.dispatcher.depart_bus()
+        selected_bus, departure = self.dispatcher.depart_bus(self.analytic.not_departed_buses)
+        self.departure_list.append(departure)
+        return self.show_menu(
+            f"{str(selected_bus)[0].capitalize() + str(selected_bus)[1:]} відправлено у {selected_bus.route}!".strip()
+        ) # str.capitalize() - не підходить, оскільки останні символи строки переводить у нижній регістр
         
 
     @are_here_buses
@@ -453,7 +445,7 @@ class AutoStation:
         Повертає: None
         """
         options = []
-        for index, departure in enumerate(self.active_departures):
+        for index, departure in enumerate(self.analytic.get_active_departures(self.departure_list)):
             options.append(f"[{index} - {departure.bus} | {departure.bus.route} | у дорозі {timedelta_to_str(departure.travel_time)}]")
         return self.show_menu("\n".join(options))
     
@@ -522,12 +514,18 @@ class AutoStation:
     @are_here_buses
     @are_here_departures
     def show_analytics(self):
-        return self.analytic.analyze_buses()
+        results = self.analytic.analyze_buses(self.bus_list, self.departure_list)
+        for bus_results in results:
+            print(f"\n\nРейсы '{bus_results.bus.number} з водієм {bus_results.bus.driver.first_name}'")
+            for departure in bus_results.departures:
+                print(f'{departure.route} | {timedelta_to_str(departure.travel_time)}')
+            print(f"Ітого - {bus_results.total_count} за {timedelta_to_str(bus_results.total_time)}")
+        return self.show_menu()
         
 
     @property
     def active_departures(self) -> list[Departure]:
-        return self.analytic.active_departures
+        return self.analytic.get_active_departures(self.departure_list)
     
 
     @property

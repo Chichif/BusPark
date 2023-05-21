@@ -50,6 +50,7 @@ class Bus(BaseModel):
 
 class Departure(BaseModel): 
     bus: Bus
+    route: Route
     departure_time: datetime = None
     arrival_time: datetime | None = None
 
@@ -69,6 +70,13 @@ class Departure(BaseModel):
         else:
             time_difference = self.arrival_time - self.departure_time
         return time_difference
+    
+
+class BusDepartureResults(BaseModel):
+    bus: Bus
+    departures: list[Departure]
+    total_count: int
+    total_time: timedelta
 
 
 class Park(BaseModel):
