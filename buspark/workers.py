@@ -158,7 +158,7 @@ class Dispatcher:
 
 
 class Manager:
-    def create_bus(self, bus_list: list[Bus]):
+    def create_bus(self, bus_list: list[Bus]) -> Bus:
         """Створює новий автобус.
 
         Параметри:
