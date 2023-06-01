@@ -182,7 +182,7 @@ class Manager:
         )
         if bus_number in (bus.number for bus in bus_list):
             print("\n\n[!] Автобус з таким номером вже існує!")
-            return self.create_bus()
+            return self.create_bus(bus_list)
         driver = Driver(first_name = driver_first_name, second_name = driver_second_name)
         bus = Bus(number = bus_number, driver = driver)
         return bus
@@ -216,8 +216,8 @@ class Manager:
                                                                                 active_departures)
             if selected_bus_active_departure:
                 selected_bus_active_departure.finish_travel()
-                bus_list.remove(selected_bus)
                 return
+            bus_list.remove(selected_bus)
             Park().remove_bus(selected_bus)
     
     
