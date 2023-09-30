@@ -51,15 +51,11 @@ def get_bus_active_departure(bus: Bus, active_departures: list[Departure]) -> De
     Returns:
         Departure | None: Об'єкт рейсу, в якому знаходиться автобус, або None, якщо автобус не знаходиться у жодному активному рейсі.
     """
-    bus_departure: tuple[Departure] = tuple(
-        filter(lambda departure: departure.bus == bus, active_departures)
+    bus_departure: tuple[Departure] = next(
+        filter(lambda departure: departure.bus == bus, active_departures),
+        None
     )
-    if bus_departure: # гарантовано, що не більше 1
-                        # адже відправити один автобус два рази на маршрут - неможливо
-        return bus_departure[0]
-    else: 
-        return None
-    
+    return bus_departure    
 
 def get_route_buses(route: Route, bus_list: list[Bus]) -> list[Bus]:
     """Повертає список автобусів, які обслуговують заданий маршрут.
